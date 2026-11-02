@@ -2,3 +2,4 @@ PLAN.md
 print/out/
 __pycache__/
 local/
+supabase/.temp/
