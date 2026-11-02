@@ -54,7 +54,7 @@
     torch: "torch|flashlight", flashlight: "torch", peg: "peg|stake", stake: "peg",
     mattress: "mattress|airbed|mat", mat: "mat|mattress", airbed: "airbed|mattress",
     thong: "thong|slide", slide: "slide|thong", jandal: "thong",
-    gas: "gas|butane|canister|cartridge", butane: "butane|gas", canister: "canister|cartridge|butane", cartridge: "cartridge|canister",
+    gas: "gas|butane|canister|cartridge", butane: "butane|gas", canister: "canister|cartridge", cartridge: "cartridge|canister",
     bbq: "bbq|barbecue|grill", barbie: "bbq", barbecue: "bbq|barbecue",
     kid: "kid|junior|youth|child|children", child: "kid|junior|youth", children: "kid|junior|youth", junior: "junior|kid|youth",
     pfd: "pfd|buoyancy", bicycle: "bike", paddleboard: "paddleboard|sup",
@@ -252,7 +252,7 @@
   function kitAnswer(topic, qn) {
     const kit = KITS[topic], n = people(qn), rows = [];
     for (const [label, query, per] of kit.items) {
-      const hits = search(query, 6);
+      const hits = search(label === "Tent" && n ? `${Math.min(n, 10)} person tent` : query, 6);
       if (!hits.length) continue;
       const pick = hits.find(h => h.p.stock > 0) || hits[0];
       rows.push({ p: pick.p, label, qty: per && n ? Math.max(1, Math.ceil(n * per)) : 1 });
@@ -265,10 +265,18 @@
   function productAnswer(qn, hits, q) {
     const top = hits[0].p;
     // Echo the shopper's own words ("tent pegs"), not the normalised tokens ("headlamp").
-    const own = String(q).toLowerCase().replace(/['’]/g, "").replace(/[^a-z0-9\s]/g, " ").split(/\s+/)
-      .filter(w => w && !STOP.has(w) && !STOP.has(stem(w))).join(" ");
-    const phrase = own || top.cat.toLowerCase();
-    const aisles = [...new Set(hits.slice(0, 5).map(h => h.p.aisle))];
+    // Trim question words off both ends but keep the middle ("raincoat for kids"); fall back
+    // to the category name when a word was a typo we fuzzy-matched ("lanturn").
+    const raw = String(q).toLowerCase().replace(/['’]/g, "").replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter(Boolean);
+    const isStop = w => STOP.has(w) || STOP.has(stem(w));
+    while (raw.length && isStop(raw[0])) raw.shift();
+    while (raw.length && isStop(raw[raw.length - 1])) raw.pop();
+    const typo = words(q).some(w => !IDX.df.has(w) && !SYN[w]);
+    const phrase = !raw.length || typo ? top.cat.toLowerCase() : raw.join(" ");
+    // One aisle when most of the top five live there; otherwise list the spread.
+    const top5 = hits.slice(0, 5);
+    const aisles = top5.filter(h => h.p.aisle === top.aisle).length >= Math.min(3, top5.length)
+      ? [top.aisle] : [...new Set(top5.map(h => h.p.aisle))];
     const alt = top.stock > 0 ? null : (hits.find(h => h.p.stock > 0) || {}).p;
     const stockLine = top.stock > 0 ? `Top match: ${top.stock} in stock.`
       : alt ? `Top match is sold out here, but the ${alt.name} has ${alt.stock} in stock.` : "Sold out here right now. The team can check other stores.";
