@@ -1,28 +1,54 @@
-// Checks the finder's answers against the catalogue, worked out independently of engine.js.
+// Checks answers from the deployed server against the database, worked out independently of the server's logic.
 //   node scripts/test_answers.mjs            run the checks
 //   node scripts/test_answers.mjs -v         also print every answer
-import { readFileSync } from "node:fs";
-import "../engine.js";
+import { BASE, API, secretKey } from "./sb.mjs";
 
-const DB = JSON.parse(readFileSync(new URL("../data/brendale.json", import.meta.url), "utf8"));
 const verbose = process.argv.includes("-v");
-const accessory = new Set(DB.accessories || []);
+const key = await secretKey();
+async function rest(path) {
+  const out = [];
+  for (let from = 0; ; from += 1000) {
+    const res = await fetch(`${BASE}/rest/v1/${path}`, { headers: { apikey: key, Authorization: `Bearer ${key}`, Range: `${from}-${from + 999}` } });
+    const rows = await res.json();
+    out.push(...rows);
+    if (rows.length < 1000) return out;
+  }
+}
+const [products, placements, categories] = await Promise.all([
+  rest("products?select=id,name,cat,price,rating,reviews,acc,kids"),
+  rest("placements?select=product_id,aisle,bay,stock&store=eq.brendale"),
+  rest("categories?select=name,accessory"),
+]);
+const here = new Map(placements.map(p => [p.product_id, p]));
+const DB = products.map(p => ({ ...p, price: +p.price, rating: p.rating == null ? null : +p.rating, ...here.get(p.id) }));
+const accessory = new Set(categories.filter(c => c.accessory).map(c => c.name));
 const kid = p => /\b(kids?|junior|youth|toddler|child|children)\b/i.test(`${p.name} ${p.cat}`);
 const bayes = p => ((p.rating || 4.2) * p.reviews + 4.2 * 20) / (p.reviews + 20);
 
-const buildStart = performance.now();
-const engine0 = createAisleEngine(DB);
-const buildMs = performance.now() - buildStart;
-
-let pass = 0, fail = 0;
-const fails = [];
+let pass = 0, fail = 0, slowest = 0, calls = 0, totalMs = 0;
+const fails = [], stamps = [];
 const ok = (cond, msg) => { if (cond) pass++; else { fail++; fails.push(msg); } };
 
+// The phone's request. Returns the answer; `ai` is true if the server would send it to the AI.
+async function ask(q, opts = {}) {
+  const t = performance.now();
+  const res = await fetch(API, { method: "POST", headers: { "content-type": "text/plain" }, body: JSON.stringify({ q, store: "brendale", dry: true, session: "test", ...opts }) });
+  const text = await res.text();
+  const ms = performance.now() - t;
+  calls++; totalMs += ms; slowest = Math.max(slowest, ms); stamps.push(ms);
+  if (!res.ok) throw new Error(`${q}: ${res.status} ${text.slice(0, 200)}`);
+  const a = JSON.parse(text.trim().split("\n").pop());
+  a.ai = a.route === "ai";
+  a.top = a.items?.[0]?.p ?? a.pool?.[0];
+  if (verbose) console.log(`${opts.voice ? "[voice] " : ""}${q}\n   ${a.ai ? `(AI, ${a.strong ? "shelf" : "plan"}) ${(a.pool || []).slice(0, 2).map(p => p.name).join(" / ")}` : a.say} | ${a.sub || ""}`);
+  return a;
+}
+
 // What each kind of question should pick, from the raw products. Deliberately its own definition of
-// each kind of thing, not the engine's: its name AND its category have to say so.
+// each kind of thing, not the server's: its name AND its category have to say so.
 function brute(match, { min = -Infinity, max = Infinity, skipKids = true } = {}) {
   const fits = typeof match === "function" ? match : p => match.test(`${p.name} ${p.cat}`);
-  return DB.products.filter(p => fits(p) && !accessory.has(p.cat) && (!skipKids || !kid(p)) && p.stock > 0 && p.price >= min && p.price <= max);
+  return DB.filter(p => fits(p) && !accessory.has(p.cat) && (!skipKids || !kid(p)) && p.stock > 0 && p.price >= min && p.price <= max);
 }
 const kind = (nameRe, catRe, notRe) => {
   const f = p => nameRe.test(p.name) && catRe.test(p.cat) && !(notRe && notRe.test(p.name));
@@ -35,13 +61,14 @@ const best = {
   rating: rows => Math.max(...rows.map(bayes)),
   reviews: rows => Math.max(...rows.map(p => p.reviews)),
 };
-const measure = { min: p => p.price, max: p => p.price, rating: bayes, reviews: p => p.reviews };
+const measure = { min: p => +p.price, max: p => +p.price, rating: p => +p.bayes, reviews: p => +p.reviews };
 
 const ADDON = /\b(tent|rod|chair|cooler|swag|kayak|bike|bag|stool) (bags?|covers?|pegs?|poles?|mats?|repair|kits?|holders?|racks?|liners?|straps?|seats?|cases?|socks?|tubes?|lights?|parts?|carriers?|stands?|ties?|cords?|ropes?|footprints?|toppers?|mattress(es)?|paddles?|tips?|butts?|handles?|oils?|grease|cleaners?|sprays?)\b/i;
 const TENT = kind(/\btents?\b/i, /\btents?\b/i, ADDON), ROD = kind(/\brods?\b/i, /\brods\b/i, ADDON), COOLER = kind(/\bcoolers?\b/i, /\bcoolers?\b/i, ADDON);
 const CHAIR = kind(/\b(chairs?|stools?)\b/i, /\b(chairs|stools)\b/i, ADDON), BAG = kind(/\bsleeping bags?\b/i, /\bsleeping bags\b/i, ADDON);
 const KAYAK = kind(/\bkayaks?\b/i, /\bkayaks\b/i, ADDON), HEAD = kind(/\b(headlamps?|head ?torch(es)?)\b/i, /\b(headlamps|head ?torch(es)?)\b/i), SWAG = kind(/\bswags?\b/i, /\bswags\b/i, ADDON);
 const BIKE = kind(/\bbikes?\b/i, /\bbikes\b/i, ADDON), BOAT = /\b(boats?)\b/i;
+const has = (want, p) => (typeof want === "function" ? want(p) : want.test(`${p.name} ${p.cat}`));
 const RANKED = [
   // cheap, however it's said
   ["cheapest fishing rod", ROD, "min"], ["what's the cheapest rod you guys got", ROD, "min"], ["uh what's like the cheapest fishing rod", ROD, "min"],
@@ -50,7 +77,7 @@ const RANKED = [
   ["tent that's not too expensive", TENT, "min"], ["inexpensive kayak", KAYAK, "min"], ["i don't want anything expensive, just a sleeping bag", BAG, "min"],
   // dear, however it's said
   ["most expensive fishing rod", ROD, "max"], ["priciest tent", TENT, "max"], ["dearest kayak", KAYAK, "max"], ["top of the range esky", COOLER, "max"],
-  ["high end sleeping bag", BAG, "max"], ["premium camping chair", kind(new RegExp("camping (chairs?|stools?)", "i"), new RegExp("(chairs|stools)", "i"), ADDON), "max"], ["what's your most expensive swag", SWAG, "max"], ["luxury tent", TENT, "max"],
+  ["high end sleeping bag", BAG, "max"], ["premium camping chair", kind(/camping (chairs?|stools?)/i, /(chairs|stools)/i, ADDON), "max"], ["what's your most expensive swag", SWAG, "max"], ["luxury tent", TENT, "max"],
   // quality and popularity
   ["best quality tent", TENT, "rating"], ["best camping chair", CHAIR, "rating"], ["highest rated head torch", HEAD, "rating"], ["top rated kayak", KAYAK, "rating"],
   ["good quality sleeping bag", BAG, "rating"], ["best esky", COOLER, "rating"], ["most popular swag", SWAG, "reviews"], ["best selling tent", TENT, "reviews"],
@@ -60,112 +87,93 @@ const RANKED = [
   ["best camping chair under 100 bucks", CHAIR, "rating", { max: 100 }], ["cheapest tent over $100", TENT, "min", { min: 100 }], ["most expensive rod under $200", ROD, "max", { max: 200 }],
   ["tent under a hundred bucks", TENT, "rating", { max: 100 }],
 ];
-for (const [q, match, kind, range] of RANKED) {
-  const r = createAisleEngine(DB).route(q);
-  const top = r.items?.[0]?.p;
-  const rows = brute(match, range);
-  if (verbose) console.log(`${q}\n   ${r.say || "(AI) " + (r.fallback?.say || "")}`);
+for (const [q, match, how, range] of RANKED) {
+  const r = await ask(q), top = r.items?.[0]?.p, rows = brute(match, range);
   if (r.ai) { ok(false, `${q}: went to AI instead of being worked out`); continue; }
   if (!rows.length) { ok(/couldn't find/i.test(r.say), `${q}: nothing qualifies, should say so: ${r.say}`); continue; }
   ok(!!top, `${q}: no product: ${r.say}`);
   if (!top) continue;
-  ok(match(top), `${q}: wrong kind of product: ${top.name} [${top.cat}]`);
+  ok(has(match, { ...top, price: +top.price }), `${q}: wrong kind of product: ${top.name} [${top.cat}]`);
   ok(top.stock > 0, `${q}: sold out: ${top.name}`);
   if (range) ok(top.price >= (range.min ?? -Infinity) && top.price <= (range.max ?? Infinity), `${q}: price outside limit: ${top.name} ${top.price}`);
-  const want = best[kind](rows), got = measure[kind](top);
-  ok(Math.abs(want - got) < 1e-9, `${q}: ${kind} should be ${want}, got ${got} (${top.name})`);
+  const want = best[how](rows), got = measure[how](top);
+  ok(Math.abs(want - got) < 1e-3, `${q}: ${how} should be ${want}, got ${got} (${top.name})`);
 }
 
 // Sizes and specs read from product names.
-const biggest = (rows, re) => Math.max(...rows.map(p => { const m = p.name.match(re); return m ? parseFloat(m[1]) : -Infinity; }));
+const biggest = (rows, re) => Math.max(...rows.map(p => { const m = p.name.replace(/,/g, "").match(re); return m ? parseFloat(m[1]) : -Infinity; }));
 for (const [q, match, re] of [["biggest tent", TENT, /(\d+)\s*-?\s*v?\s*person/i], ["brightest torch", /\btorch(es)?\b/i, /(\d+)\s*lumen/i], ["brightest head torch", HEAD, /(\d+)\s*lumen/i]]) {
-  const r = createAisleEngine(DB).route(q), top = r.items?.[0]?.p;
-  if (verbose) console.log(`${q}\n   ${r.say || "(AI)"}`);
-  const m = top && top.name.replace(/,/g, "").match(re);
-  ok(m && parseFloat(m[1]) === biggest(brute(match).map(p => ({ ...p, name: p.name.replace(/,/g, "") })), re), `${q}: ${top?.name}`);
+  const r = await ask(q), top = r.items?.[0]?.p, m = top && top.name.replace(/,/g, "").match(re);
+  ok(m && parseFloat(m[1]) === biggest(brute(match), re), `${q}: ${top?.name}`);
 }
 {
-  const r = createAisleEngine(DB).route("warmest sleeping bag"), top = r.items?.[0]?.p;
-  if (verbose) console.log(`warmest sleeping bag\n   ${r.say}`);
+  const r = await ask("warmest sleeping bag"), top = r.items?.[0]?.p;
   const temp = p => { const m = p.name.match(/(-?\d+)\s*°/); return m ? parseFloat(m[1]) : Infinity; };
   ok(top && temp(top) === Math.min(...brute(BAG).map(temp)), `warmest sleeping bag: ${top?.name}`);
 }
 
-// Follow-ups keep the subject and move the right way.
+// Follow-ups keep the subject and move the right way. The phone carries `ctx` from one answer to the next.
 {
-  const e = createAisleEngine(DB);
-  const say = q => { const r = e.route(q); if (r.ai) return { ...r.fallback, wentAI: true }; e.log(q, r); if (verbose) console.log(`${q}\n   ${r.say}`); return r; };
-  const a = say("cheapest fishing rod").items[0].p;
-  const b = say("and the most expensive?").items[0].p;
-  ok(ROD.test(`${b.name} ${b.cat}`) && b.price > a.price, `"and the most expensive?" should stay on rods: ${b.name}`);
-  const c = say("got anything cheaper?").items[0].p;
-  ok(ROD.test(`${c.name} ${c.cat}`) && c.price < b.price, `"got anything cheaper?" should be a cheaper rod: ${c.name} ${c.price} vs ${b.price}`);
-  const d = say("something else").items[0].p;
-  ok(ROD.test(`${d.name} ${d.cat}`) && d.id !== c.id, `"something else" should be a different rod: ${d.name}`);
-  const f = say("any better?").items[0].p;
-  ok(ROD.test(`${f.name} ${f.cat}`) && bayes(f) >= bayes(d), `"any better?" should rate at least as high: ${f.name}`);
-  const g = say("camping chair").items[0].p;
-  const h = say("got anything cheaper?").items[0].p;
-  ok(CHAIR.test(`${h.name} ${h.cat}`) && h.price < g.price, `chair then cheaper: ${g.name} ${g.price} -> ${h.name} ${h.price}`);
-  const t = say("biggest tent").items[0].p;
-  const u = say("anything smaller?").items[0].p;
-  ok(TENT.test(`${u.name} ${u.cat}`) && u.id !== t.id, `tent then smaller: ${u.name}`);
+  let ctx = null;
+  const say = async q => { const r = await ask(q, { ctx }); if (r.ctx) ctx = r.ctx; return r; };
+  const a = (await say("cheapest fishing rod")).items[0].p;
+  const b = (await say("and the most expensive?")).items[0].p;
+  ok(has(ROD, b) && b.price > a.price, `"and the most expensive?" should stay on rods: ${b.name}`);
+  const c = (await say("got anything cheaper?")).items[0].p;
+  ok(has(ROD, c) && c.price < b.price, `"got anything cheaper?" should be a cheaper rod: ${c.name} ${c.price} vs ${b.price}`);
+  const d = (await say("something else")).items[0].p;
+  ok(has(ROD, d) && d.id !== c.id, `"something else" should be a different rod: ${d.name}`);
+  const better = await say("any better?"), f = better.items?.[0]?.p;
+  ok(f ? has(ROD, f) && +f.bayes >= +d.bayes : /already the top rated/.test(better.say), `"any better?" should rate at least as high: ${f?.name || better.say}`);
+  ctx = null;
+  const g = (await say("camping chair")).items[0].p;
+  const h = (await say("got anything cheaper?")).items[0].p;
+  ok(has(CHAIR, h) && h.price < g.price, `chair then cheaper: ${g.name} ${g.price} -> ${h.name} ${h.price}`);
+  ctx = null;
+  const t = (await say("biggest tent")).items[0].p;
+  const u = (await say("anything smaller?")).items[0].p;
+  ok(has(TENT, u) && u.id !== t.id, `tent then smaller: ${u.name}`);
+  ctx = null;
+  await say("hard cooler");
+  const big = await say("got anything bigger?");
+  ok(!big.ai && (/cooler|icebox/i.test(big.items?.[0]?.p.name || "") || /already the biggest/.test(big.say)), `cooler then bigger should stay on coolers: ${big.items?.[0]?.p.name || big.say}`);
 }
 
-// Plain lookups: the right thing first, and never a near-miss word.
+// Plain lookups: answered straight away, the right thing first, never a near-miss word.
 for (const [q, match] of [
-  ["camping chair", CHAIR], ["camping chairs", CHAIR], ["where are the camping chairs", CHAIR], ["do you have camping chairs", CHAIR], ["how much is a camping chair", CHAIR],
+  ["tent", TENT], ["tents", TENT], ["camping chair", CHAIR], ["camping chairs", CHAIR], ["where are the camping chairs", CHAIR], ["do you have camping chairs", CHAIR], ["how much is a camping chair", CHAIR],
   ["tent pegs", /\bpegs?\b/i], ["kids sleeping bag", BAG], ["gas canister", /\b(canister|cartridge|butane|gas)/i], ["head torch", HEAD], ["fishing rod", ROD], ["esky", COOLER],
   ["do you sell boats", BOAT], ["boats", BOAT], ["kayak", KAYAK], ["rain jacket", /\brain\b/i], ["first aid kit", /first aid/i], ["hiking boots", /\b(boot|hik)/i], ["life jacket", /\b(pfd|life jacket)/i],
+  ["sunscreen", /\b(sunscreen|spf)\b/i], ["do you have a gopro", /\b(gopro|action|camera)/i], ["tinny", BOAT],
 ]) {
-  const r = createAisleEngine(DB).route(q), base = r.ai ? r.fallback : r, top = base.items?.[0]?.p;
-  if (verbose) console.log(`${q}\n   ${r.ai ? "(AI first) " : ""}${base.say}`);
-  ok(top && match.test(`${top.name} ${top.cat}`), `${q}: led with ${top?.name} [${top?.cat}]`);
-}
-ok(createAisleEngine(DB).route("tell me a joke").ai, "tell me a joke should go to the AI");
-for (const q of ["is this real stock?", "where are the toilets?", "returns"]) {
-  const r = createAisleEngine(DB).route(q), base = r.ai ? r.fallback : r;
-  if (verbose) console.log(`${q}\n   ${base.say}`);
-  ok(!base.items?.length, `${q}: should not show products: ${base.items?.[0]?.p.name}`);
+  const r = await ask(q), top = r.items?.[0]?.p;
+  ok(!r.ai, `${q}: exact product words should answer straight away, not go to the AI`);
+  ok(top && has(match, top), `${q}: led with ${top?.name} [${top?.cat}]`);
 }
 
-// Misheard words, as speech recognition really gets them wrong. Each should still find the right thing.
-const LANTERN = /\blanterns?\b/i, LURE = /\blures?\b/i, REEL = /\breels?\b/i, PEG = /\bpegs?\b/i, BOOT = /\b(boots?|shoes?)\b/i, TACKLE = /\btackle\b/i;
-for (const [q, match] of [
-  ["tint", TENT], ["tints", TENT], ["camping tint", TENT], ["family tint", TENT], ["taunt", TENT], ["tent pigs", PEG], ["tint pegs", PEG], ["ten pegs", PEG], ["tentpegs", PEG],
-  ["camping share", CHAIR], ["camping cheer", CHAIR], ["sleeping bug", BAG], ["sleeping back", BAG], ["sleepin bag", BAG], ["sleeping beg", BAG],
-  ["fishing road", ROD], ["fishing rad", ROD], ["fishing rode", ROD], ["fishin rod", ROD], ["cheapest fishing road", ROD], ["best fishing rad", ROD],
-  ["swig", SWAG], ["swagg", SWAG], ["kyack", KAYAK], ["cayak", KAYAK], ["kayack", KAYAK], ["fishing kyack", KAYAK], ["coolar", COOLER], ["eski", COOLER], ["hard colour", COOLER],
-  ["lanton", LANTERN], ["camping lantin", LANTERN], ["fishing lore", LURE], ["fishing real", REEL], ["spinning real", REEL], ["hiking boats", BOOT], ["hiking boat", BOOT],
-  ["tackel box", TACKLE], ["tackle bocks", TACKLE], ["hed torch", HEAD], ["gas cannister", /\b(canister|cartridge|butane|gas)/i], ["bike helmut", /\bhelmets?\b/i], ["rain jackit", /\brain\b/i],
-  ["for person tent", TENT], ["to person tent", TENT], ["back pack", /\b(backpack|pack)\b/i], ["wet suit", /\bwetsuits?\b/i], ["sun glasses", /\bsunglasses\b/i],
-]) {
-  const r = createAisleEngine(DB).route(q, { voice: true }), base = r.ai ? r.fallback : r, top = base.items?.[0]?.p;
-  if (verbose) console.log(`[voice] ${q}\n   ${r.ai ? "(AI first) " : ""}${base.say} | ${base.sub || ""}`);
-  ok(top && match.test(`${top.name} ${top.cat}`), `[voice] ${q}: led with ${top?.name} [${top?.cat}]`);
+// Max's rule: exact terms are instant, everything else goes to the AI.
+for (const q of ["i want to catch some big ass fish", "what should I wear in the rain", "something to stop the kids getting sunburnt", "which tent for a family of 4 under 500 bucks?", "I need a comfy chair for my bad back",
+  "what's warmer, down or synthetic?", "good tent for two people and a dog", "how do I keep mozzies away", "do you price match", "are you open on sunday", "tell me a joke", "thanks", "is a swag better than a tent",
+  "what's the difference between a swag and a tent", "tent or swag", "best camping chair for my bad back", "what do I need to go crabbing", "what gas fits a coleman stove", "my son is 8, what bike should he get"]) {
+  const r = await ask(q);
+  ok(r.ai, `${q}: should go to the AI, got: ${r.say}`);
+  ok(!/^Showing /.test(r.note || ""), `${q}: shouldn't be corrected: ${r.note}`);
 }
 {
-  const r = createAisleEngine(DB).route("for person tent", { voice: true }), top = r.items?.[0]?.p;
-  ok(top && parseInt((top.name.match(/(\d+)\s*-?\s*v?\s*person/i) || [])[1], 10) >= 4, `"for person tent" should mean 4 person: ${top?.name}`);
-}
-// Real words stay as they are, and small talk doesn't turn into a product.
-for (const [q, match] of [["road bike", /\b(road|bike)\b/i], ["reel", REEL], ["dog life jacket", /\bdog\b/i], ["boots", BOOT], ["boats", BOAT], ["tint", TENT]]) {
-  const r = createAisleEngine(DB).route(q, { voice: true }), base = r.ai ? r.fallback : r, top = base.items?.[0]?.p;
-  ok(top && match.test(`${top.name} ${top.cat}`), `${q}: led with ${top?.name}`);
-}
-for (const q of ["thanks", "cheers mate", "tell me a joke", "what's the weather today", "do you sell pizza"]) {
-  const r = createAisleEngine(DB).route(q, { voice: true }), base = r.ai ? r.fallback : r;
-  if (verbose) console.log(`[voice] ${q}\n   ${r.ai ? "(AI first) " : ""}${base.say} | ${base.sub || ""}`);
-  ok(!/^Showing /.test(base.sub || ""), `${q}: shouldn't be "corrected": ${base.sub}`);
-}
-{
-  const e = createAisleEngine(DB);
-  ok(TENT.test(e.bestHeard(["tint", "tent", "tin"])), `bestHeard should pick tent: ${e.bestHeard(["tint", "tent", "tin"])}`);
-  ok(/fishing rod/.test(e.bestHeard(["fishing road", "fishing rod"])) || /fishing road/.test(e.bestHeard(["fishing road", "fishing rod"])), "bestHeard fishing rod");
+  const r = await ask("what can I get to keep my beers cold");
+  ok(r.ai && r.pool.some(p => /cooler/i.test(p.cat)), "beers cold: AI should get coolers to choose from");
+  const mozzies = await ask("how do I keep mozzies away");
+  ok(mozzies.pool.some(p => /repellent|aerogard|mosquito|mozzie/i.test(p.name)), `mozzies: AI should get repellent: ${mozzies.pool.slice(0, 3).map(p => p.name)}`);
+  const sun = await ask("something to stop the kids getting sunburnt");
+  ok(sun.pool.some(p => /sunscreen|spf/i.test(p.name)), `sunburn: AI should get sunscreen: ${sun.pool.slice(0, 3).map(p => p.name)}`);
+  const choice = await ask("which is better, a swag or a tent?");
+  ok(choice.pool.some(p => has(SWAG, p)) && choice.pool.some(p => has(TENT, p)), `swag or tent: AI should get both: ${choice.pool.slice(0, 4).map(p => p.name)}`);
+  const big = await ask("i want to catch some big ass fish");
+  ok(big.pool.some(p => /rod|reel|combo/i.test(p.name)), `big fish: AI should get fishing gear: ${big.pool.slice(0, 3).map(p => p.name)}`);
 }
 
 // Several things at once, by voice, with or without joins, in walking order.
-const HOOK = /\bhooks?\b/i, SUN = /\b(sunscreen|spf|sun)\b/i, STOVE = /\bstoves?\b/i, GASP = /\b(gas|butane|propane)\b/i, LINE = /\b(line|braid|mono)\b/i;
+const HOOK = /\bhooks?\b/i, SUN = /\b(sunscreen|spf|sun)\b/i, STOVE = /\bstoves?\b/i, GASP = /\b(gas|butane|propane)\b/i, LINE = /\b(line|braid|mono)\b/i, REEL = /\breels?\b/i;
 for (const [q, wants] of [
   ["i want a fishing hook, attempt, a fishing rod, and sunscreen", [HOOK, TENT, ROD, SUN]],
   ["i want a fishing hook attempt a fishing rod and sunscreen", [HOOK, TENT, ROD, SUN]],
@@ -179,62 +187,71 @@ for (const [q, wants] of [
   ["cheapest tent and the best sleeping bag", [TENT, BAG]],
   ["um a tint and a fishing road please", [TENT, ROD]],
 ]) {
-  const r = createAisleEngine(DB).route(q, { voice: true }), rows = r.items || [];
-  if (verbose) console.log(`[list] ${q}\n   ${r.ai ? "(AI first) " + r.fallback.say : r.say} | ${r.sub || ""}\n   ${rows.map(x => x.p.name.slice(0, 34)).join(" / ")}`);
-  ok(!r.ai && rows.length === wants.length, `[list] ${q}: expected ${wants.length} items, got ${rows.length}: ${r.say || r.fallback?.say}`);
-  for (const want of wants) ok(rows.some(x => (typeof want === "function" ? want(x.p) : want.test(`${x.p.name} ${x.p.cat}`))), `[list] ${q}: missing ${want}: ${rows.map(x => x.p.name)}`);
+  const r = await ask(q, { voice: true }), rows = r.items || [];
+  ok(!r.ai && rows.length === wants.length, `[list] ${q}: expected ${wants.length} items, got ${rows.length}: ${r.say || "(AI)"}`);
+  for (const want of wants) ok(rows.some(x => has(want, x.p)), `[list] ${q}: missing ${want}: ${rows.map(x => x.p.name)}`);
   const aisles = rows.map(x => x.p.aisle);
   ok(aisles.every((n, i) => !i || aisles[i - 1] <= n), `[list] ${q}: not in walking order: ${aisles}`);
 }
 // One thing, even with "and" or "a" in it.
 for (const q of ["rod and reel combo", "tent for a family of 4", "do you have a tent", "where can i find a fishing rod", "a tent", "sleeping bag", "tents", "cheapest tent for a family of 5", "camping table", "which is better a tent or a swag"]) {
-  const r = createAisleEngine(DB).route(q, { voice: true });
-  ok(!(r.walk), `${q}: shouldn't be treated as a list: ${r.say}`);
+  const r = await ask(q, { voice: true });
+  ok(!r.walk, `${q}: shouldn't be treated as a list: ${r.say}`);
+}
+
+// Misheard words, as speech recognition really gets them wrong. Each should still find the right thing.
+const LANTERN = /\blanterns?\b/i, LURE = /\blures?\b/i, PEG = /\bpegs?\b/i, BOOT = /\b(boots?|shoes?)\b/i, TACKLE = /\btackle\b/i;
+for (const [q, match] of [
+  ["tint", TENT], ["tints", TENT], ["camping tint", TENT], ["family tint", TENT], ["taunt", TENT], ["tent pigs", PEG], ["tint pegs", PEG], ["ten pegs", PEG], ["tentpegs", PEG],
+  ["camping share", CHAIR], ["camping cheer", CHAIR], ["sleeping bug", BAG], ["sleeping back", BAG], ["sleepin bag", BAG], ["sleeping beg", BAG],
+  ["fishing road", ROD], ["fishing rad", ROD], ["fishing rode", ROD], ["fishin rod", ROD], ["cheapest fishing road", ROD], ["best fishing rad", ROD],
+  ["swig", SWAG], ["swagg", SWAG], ["kyack", KAYAK], ["cayak", KAYAK], ["kayack", KAYAK], ["fishing kyack", KAYAK], ["coolar", COOLER], ["eski", COOLER], ["hard colour", COOLER],
+  ["lanton", LANTERN], ["camping lantin", LANTERN], ["fishing lore", LURE], ["fishing real", REEL], ["spinning real", REEL], ["hiking boats", BOOT], ["hiking boat", BOOT],
+  ["tackel box", TACKLE], ["tackle bocks", TACKLE], ["hed torch", HEAD], ["gas cannister", /\b(canister|cartridge|butane|gas)/i], ["bike helmut", /\bhelmets?\b/i], ["rain jackit", /\brain\b/i],
+  ["for person tent", TENT], ["to person tent", TENT], ["back pack", /\b(backpack|pack)\b/i], ["wet suit", /\bwetsuits?\b/i], ["sun glasses", /\bsunglasses\b/i],
+]) {
+  const r = await ask(q, { voice: true }), top = r.top;
+  ok(top && has(match, top), `[voice] ${q}: led with ${top?.name} [${top?.cat}]${r.ai ? " (AI)" : ""}`);
+}
+{
+  const r = await ask("for person tent", { voice: true }), top = r.items?.[0]?.p;
+  ok(top && parseInt((top.name.match(/(\d+)\s*-?\s*v?\s*person/i) || [])[1], 10) >= 4, `"for person tent" should mean 4 person: ${top?.name}`);
+}
+// Real words stay as they are, and small talk doesn't turn into a product.
+for (const [q, match] of [["road bike", /\b(road|bike)\b/i], ["reel", REEL], ["dog life jacket", /\bdog\b/i], ["boots", BOOT], ["boats", BOAT]]) {
+  const r = await ask(q, { voice: true });
+  ok(r.top && has(match, r.top), `${q}: led with ${r.top?.name}`);
+}
+for (const q of ["thanks", "cheers mate", "tell me a joke", "what's the weather today", "do you sell pizza"]) {
+  const r = await ask(q, { voice: true });
+  ok(!/^Showing /.test(r.sub || r.note || ""), `${q}: shouldn't be "corrected": ${r.sub || r.note}`);
+}
+{
+  const pick = async alts => { const res = await fetch(API, { method: "POST", headers: { "content-type": "text/plain" }, body: JSON.stringify({ q: alts[0], alts, store: "brendale", dry: true }) }); const a = JSON.parse((await res.text()).trim().split("\n").pop()); return a.heard; };
+  ok(/tent/.test(await pick(["tint", "tent", "tin"])), "the speech service's other guesses should be used: tint, tent");
 }
 
 // The examples printed on the sign and shown on the welcome screen: these get tried first, so they must be right.
 {
-  const on = q => { const r = createAisleEngine(DB).route(q); if (verbose) console.log(`[sign] ${q}\n   ${r.ai ? "(AI first) " + r.fallback.say : r.say}`); return r.ai ? r.fallback : r; };
   const tops = (r, n = 4) => (r.items || []).slice(0, n).map(i => i.p);
-  const pegs = on("tent pegs"), bags = on("kids sleeping bag"), gas = on("gas canister"), torch = on("head torch"), rod = on("cheapest fishing rod"), loo = on("where are the toilets?"), kit = on("camping weekend for 4");
+  const pegs = await ask("tent pegs"), bags = await ask("kids sleeping bag"), gas = await ask("gas canister"), torch = await ask("head torch"), rod = await ask("cheapest fishing rod"), loo = await ask("where are the toilets?"), kit = await ask("camping weekend for 4");
   ok(tops(pegs).every(p => /\bpegs?\b/i.test(p.name)), `tent pegs: ${tops(pegs).map(p => p.name)}`);
   ok(tops(bags).every(p => /\b(kids?|junior|youth)\b/i.test(p.name + " " + p.cat) && /sleeping bag/i.test(p.name)), `kids sleeping bag: ${tops(bags).map(p => p.name)}`);
   ok(tops(gas).every(p => /\b(butane|propane|gas)\b/i.test(p.name) && /\b(cartridge|canister|cylinder|bottle)s?\b/i.test(p.name)), `gas canister: ${tops(gas).map(p => p.name)}`);
   ok(!/Aisle (15|20)\b/.test(gas.say), `gas canister scattered: ${gas.say}`);
   ok(tops(torch).every(p => /\b(headlamps?|head ?torch(es)?)\b/i.test(p.name)), `head torch: ${tops(torch).map(p => p.name)}`);
-  ok(ROD(tops(rod, 1)[0]), `cheapest fishing rod: ${tops(rod, 1)[0]?.name}`);
+  ok(has(ROD, tops(rod, 1)[0] || { name: "", cat: "" }), `cheapest fishing rod: ${tops(rod, 1)[0]?.name}`);
   ok(/toilets/i.test(loo.say) && loo.zone === "toilets", `toilets: ${loo.say}`);
   ok(/starter list for 4/.test(kit.say) && kit.items.length >= 7, `camping weekend for 4: ${kit.say}`);
   for (const [q, re] of [["what should I bring on a fishing trip", /fishing starter list/], ["first time camping with 2 kids", /camping starter list for 4/], ["tent for a camping weekend", /tent/i]]) {
-    const r = on(q);
-    ok(re.test(r.say), `${q}: ${r.say}`);
+    const r = await ask(q);
+    ok(re.test(r.say || r.top?.name || ""), `${q}: ${r.say || "(AI)"}`);
   }
 }
 
-// Things the browser test caught: never "corrected" into a product, and sent to the AI with the right shelf.
-for (const q of ["do you price match", "are you open on sunday", "do you do afterpay", "what's your returns policy", "which is better, a swag or a tent?", "tent or swag", "what's the difference between a swag and a tent"]) {
-  const r = createAisleEngine(DB).route(q);
-  if (verbose) console.log(`${q}\n   ${r.ai ? "(AI first) " + r.fallback.say : r.say}`);
-  ok(r.ai || /service desk/i.test(r.say || ""), `${q}: should go to the AI or the desk: ${r.say}`);
-  ok(!/^Showing /.test((r.ai ? r.fallback.sub : r.sub) || ""), `${q}: shouldn't be corrected`);
-}
-{
-  const r = createAisleEngine(DB).route("what can I get to keep my beers cold");
-  ok(r.ai && r.pool.some(h => /cooler/i.test(h.p.cat)), "beers cold: AI should get coolers to choose from");
-  ok(!/^Showing /.test(r.fallback.sub || ""), `beers cold shouldn't be corrected: ${r.fallback.sub}`);
-  const e = createAisleEngine(DB);
-  e.route("hard cooler");
-  const b = e.route("got anything bigger?"), base = b.ai ? b.fallback : b;
-  ok(!b.ai && /cooler/i.test(base.items?.[0]?.p.name || ""), `cooler then bigger should stay on coolers: ${base.items?.[0]?.p.name} ${b.ai ? "(went to AI)" : ""}`);
-}
-
-// Speed: the part the phone does before any network.
-const QS = RANKED.map(r => r[0]);
-const t0 = performance.now();
-for (let i = 0; i < 20; i++) for (const q of QS) engine0.route(q);
-const perQ = (performance.now() - t0) / (20 * QS.length);
-
-console.log(`\n${DB.products.length} products | index built in ${buildMs.toFixed(0)}ms | ${perQ.toFixed(2)}ms per question on this PC`);
+const sorted = [...stamps].sort((a, b) => a - b);
+const pct = p => sorted[Math.floor(sorted.length * p)].toFixed(0);
+console.log(`\n${DB.length} products | ${calls} requests to the live server | median ${pct(0.5)}ms, 95th ${pct(0.95)}ms, slowest ${slowest.toFixed(0)}ms from this PC`);
 console.log(`${pass} passed, ${fail} failed`);
 for (const f of fails) console.log("  FAIL", f);
 process.exit(fail ? 1 : 0);

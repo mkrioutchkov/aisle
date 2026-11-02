@@ -44,12 +44,12 @@ async function loadInfo() {
 }
 
 const hits = new Map<string, number[]>();
-function tooMany(ip: string) {
+function tooMany(ip: string, limit: number) {
   const now = Date.now(), list = (hits.get(ip) || []).filter(t => now - t < 60000);
   list.push(now);
   hits.set(ip, list);
   if (hits.size > 5000) hits.clear();
-  return list.length > RATE_PER_MINUTE;
+  return list.length > limit;
 }
 
 async function aiPlan(messages: unknown) {
@@ -143,7 +143,8 @@ Deno.serve(async req => {
   }
   if (body.action === "ping") return json({ ok: true });
   const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "unknown";
-  if (tooMany(ip)) return json({ error: "too many requests" }, 429);
+  // A dry run never reaches the AI, so it costs little: tests use it to check answers.
+  if (tooMany(ip, body.dry ? RATE_PER_MINUTE * 20 : RATE_PER_MINUTE)) return json({ error: "too many requests" }, 429);
 
   const info = await loadInfo();
   if (body.action === "init") return json({ aisles: info.aisles.map((a: any) => ({ n: a.n, dept: a.dept, label: a.label })), stores: info.stores });

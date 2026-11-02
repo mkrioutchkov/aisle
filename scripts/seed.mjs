@@ -83,4 +83,5 @@ console.log("words", words.length);
 await insert("words", words, 3000);
 console.log("placements", placements.length);
 await insert("placements", placements, 4000);
+await sql("analyze products; analyze placements; analyze words;");
 console.log(await sql("select (select count(*) from products) products, (select count(*) from placements) placements, (select count(*) from words) words, (select count(*) from words where head) heads, pg_size_pretty(pg_database_size(current_database())) size"));

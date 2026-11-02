@@ -3,7 +3,7 @@
 // memory (ctx, chat), so any server instance can answer any question.
 import {
   ADD_ONS, ADVICE_RE, CONCEPTS, HEAD, KITS, KIT_NOISE, KIT_RE, KIT_TOPIC, KIDS_RE, NUM, NUMW, REAL_RE, REL_SORT, SMALLTALK, STOP, STORE_RE, SYN, ZONE_OF,
-  cap, lev, money, norm, parseAsk, sound, soundClass, stem, toks, where, words,
+  RANK_ADVICE_RE, cap, lev, money, norm, parseAsk, sound, soundClass, stem, toks, where, words,
 } from "./text.mjs";
 
 const NOT_FOUND = "Hmm, I couldn't find that one. Try other words, or ask the team at the service desk (front right).";
@@ -116,6 +116,12 @@ export function createEngine(db, info, store) {
       const w = stem(x), opts = known(x) ? [{ to: x, cost: 0 }] : [];
       if (known(x) && !voice) return opts;
       opts.push(...blends[n]);
+      // A word run together: "tentpegs".
+      if (!known(x) && x.length >= 6) {
+        for (let i = 3; i <= x.length - 3; i++) {
+          if (known(x.slice(0, i)) && known(x.slice(i))) opts.push({ to: `${x.slice(0, i)} ${x.slice(i)}`, cost: 1 });
+        }
+      }
       const sureOnes = alikeLists[n].filter(a => {
         // On its own a word must become a kind of product, not a model name ("lanton" isn't an
         // Avenli London spa). With other words alongside, they do the checking.
@@ -217,8 +223,10 @@ export function createEngine(db, info, store) {
       return answer(r.rows, `The ${p.name} rates higher: ${p.rating} stars from ${p.reviews} reviews, ${money(p.price)}, ${where(p)}.`);
     }
     if (rel === "bigger" || rel === "smaller") {
-      if (T.size == null) return null;
-      const r = await findFromCtx(ctx, { ...(rel === "bigger" ? { sizeGt: T.size, sort: "size-asc" } : { sizeLt: T.size, sort: "size-desc" }), exclude: skip, limit: 3 });
+      // The last item may not say its size ("Soft Cooler"), so then just show the biggest or smallest that do.
+      const direction = T.size == null ? { sort: rel === "bigger" ? "size-desc" : "size-asc" }
+        : rel === "bigger" ? { sizeGt: T.size, sort: "size-asc" } : { sizeLt: T.size, sort: "size-desc" };
+      const r = await findFromCtx(ctx, { ...direction, exclude: skip, limit: 3 });
       if (!r.rows.length) return already(rel === "bigger" ? "biggest" : "smallest");
       const p = r.rows[0];
       return answer(r.rows, `The ${p.name} is ${rel} at ${money(p.price)}, ${where(p)}.`);
@@ -255,13 +263,15 @@ export function createEngine(db, info, store) {
   }
 
   // A plain lookup: every word is a product word and the last one names a kind of thing.
-  function isExactLookup(q, a) {
+  function isExactLookup(q, a, single) {
     const content = words(a.rest);
     if (!content.length || content.length > 3 || a.ai) return false;
     if (ADVICE_RE.test(norm(q))) return false;
     if (!content.every(w => wordInfo.get(w) || SYN[w])) return false;
     const last = content[content.length - 1];
-    return !!(wordInfo.get(last) && wordInfo.get(last).head) || altsOf(last).some(w => wordInfo.get(w) && wordInfo.get(w).head);
+    if ((wordInfo.get(last) && wordInfo.get(last).head) || altsOf(last).some(w => wordInfo.get(w) && wordInfo.get(w).head)) return true;
+    // Named as an item in a list, a catalogue word is enough: "a stove and some gas".
+    return !!single && !!wordInfo.get(last) && (wordInfo.get(last).cat || wordInfo.get(last).df >= 10);
   }
 
   async function plainAnswer(q, about) {
@@ -366,6 +376,8 @@ export function createEngine(db, info, store) {
     let parts = splitItems(text).filter(p => words(parseAsk(p).rest).length);
     if (parts.length < 2) parts = await chopItems(text);
     if (parts.length < 2 || parts.length > 8) return null;
+    // "a tent for two people and a dog" is one question about a tent, not a list with a dog on it.
+    if (parts.some(p => /\b(dogs?|kids?|wife|husband|partner|mates?|family|son|daughter|baby|child|children|friends?|mum|dad)$/.test(p))) return null;
     const answers = await Promise.all(parts.map(part => routeOne(part, { ...opts, single: true, ctx: null })));
     const rows = [], missing = [];
     answers.forEach((r, i) => {
@@ -408,7 +420,7 @@ export function createEngine(db, info, store) {
     const allKnown = content.length > 0 && content.every(isKnown);
     const correctable = !first.ai && !ADVICE_RE.test(qnHeard);
     // "the kayaks and the life jackets" clearly says two things.
-    if (!opts.single && (/,|\band (?:a|an|the|some)\b/.test(lower) || splitItems(lower).length > 1)) {
+    if (!opts.single && (/,|\band (?:a|an|the|some)\b/.test(lower) || /(?<!\b(?:for|of|with|in|on|to|at|under|over|about))\s+(?:a|an|some)\s/.test(lower.replace(LEAD_IN, "")))) {
       const list = await listAnswer(heard, opts);
       if (list) return list;
     }
@@ -481,7 +493,7 @@ export function createEngine(db, info, store) {
       if (!words(other).length) return kitAnswer(topic[0], qn);
     }
 
-    if (!a.ai && (a.sort || a.limit || a.persons) && !(a.rel && !rest.length) && !ADVICE_RE.test(norm(a.rest))) {
+    if (!a.ai && (a.sort || a.limit || a.persons) && !(a.rel && !rest.length) && !RANK_ADVICE_RE.test(norm(q))) {
       // "and the most expensive?" is about what we were just discussing; "the most expensive thing you sell" isn't.
       const wholeStore = /\b(thing|item|product|store|shop|everything|overall)\b/.test(a.rest);
       if (!rest.length && ctx && !wholeStore) {
@@ -492,7 +504,7 @@ export function createEngine(db, info, store) {
         if (r) return r;
       }
     }
-    if (!a.sort && !a.limit && !a.persons && !a.rel && isExactLookup(q, a)) {
+    if (!a.sort && !a.limit && !a.persons && !a.rel && isExactLookup(q, a, opts.single)) {
       const r = await plainAnswer(q, a.rest);
       if (r) return r;
     }
@@ -510,15 +522,19 @@ export function createEngine(db, info, store) {
     const all = known.length && known.length === words(a.rest).length;
     const jobs = [];
     const shelves = CONCEPTS.filter(([re]) => re.test(qn)).flatMap(([, s]) => s);
-    if (all) jobs.push(find(a.rest, { kidsOk, persons: a.persons, min: a.min, max: a.max, sort, limit: 10 }));
+    // A choice ("a swag or a tent") needs the best of each, not products that mention both.
+    const together = all && !a.ai;
+    if (together) jobs.push(find(a.rest, { kidsOk, persons: a.persons, min: a.min, max: a.max, sort, limit: 10 }));
     for (const s of shelves) jobs.push(find(s, { kidsOk, min: a.min, max: a.max, sort: a.sort || "rating", limit: 5 }));
-    if (!all) for (const w of known) jobs.push(find(w, { kidsOk, min: a.min, max: a.max, sort: a.sort || "relevance", limit: 4 }));
+    const heads = known.filter(w => (wordInfo.get(w) || {}).head);
+    if (!together) for (const w of heads.length ? heads : known) jobs.push(find(w, { kidsOk, min: a.min, max: a.max, sort: a.sort || "rating", limit: heads.length ? 6 : 4 }));
     if ((a.rel || /\b(that one|this one|those|them|it|cheaper|dearer|better)\b/.test(qn)) && ctx && ctx.top) jobs.push(findFromCtx(ctx, { sort: "rating", limit: 6 }));
     const found = await Promise.all(jobs);
-    const matched = all && found[0] && found[0].rows.length > 0;
+    const matched = together && found[0] && found[0].rows.length > 0;
     for (const r of found) for (const p of r.rows) if (p.stock > 0 || matched) add(p);
     if (ctx && ctx.top && !pool.length) { const r = await findFromCtx(ctx, { sort: "rating", limit: 6 }); r.rows.forEach(add); }
-    return { pool, strong: matched || shelves.length > 0 };
+    // A product word in the question is enough to go on; only with none does the AI plan its own search.
+    return { pool, strong: matched || shelves.length > 0 || (heads.length > 0 && pool.length > 0) };
   }
 
   // A search the AI asked for: "surf rod", sorted by rating, up to $300.

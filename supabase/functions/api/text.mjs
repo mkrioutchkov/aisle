@@ -219,12 +219,14 @@ export const STORE_RE = /\b(price match(ing)?|match(es)? (a |the )?price|are you
 export const REAL_RE = /\b(is (this|that|it|the stock) real|real (stock|data)|sample data|fake|demo)\b/;
 // Questions asking for judgement rather than a thing: these go to the AI even when every word is a product word.
 export const ADVICE_RE = /\b(which|should|would|why|how (do|can|to|should|does)|what (do|should|can|would|is|are|goes|fits)|whats|good for|suits?|suitable|recommend|suggest|help|want to|need to|going to|trying to|for my|to keep|to stop|that one|this one|those|them|difference|compare|versus|vs|or)\b/;
+// Same, for a ranking: "what's the cheapest rod" is still a ranking, "cheapest rod for my bad back" isn't.
+export const RANK_ADVICE_RE = /\b(which|should|would|why|how (do|can|to|should|does)|good for|suits?|suitable|recommend|suggest|help|want to|need to|going to|trying to|for my|to keep|to stop|difference|compare|versus|vs|or)\b/;
 // Everyday words that point at a shelf, so the AI gets the right products to choose from.
 export const CONCEPTS = [
   [/\b(beers?|drinks?|cold|ice|chill\w*)\b/, ["cooler"]],
   [/\b(rain\w*|wet|storm\w*|waterproof)\b/, ["rain jacket"]],
   [/\b(night|dark)\b/, ["headlamp", "lantern"]],
-  [/\b(freez\w*|winter|snow)\b/, ["sleeping bag", "thermal"]],
+  [/\b(freez\w*|winter|snow|warm\w*|down|synthetic|insulat\w*)\b/, ["sleeping bag", "thermal", "down jacket"]],
   [/\b(sleep\w*|bed)\b/, ["sleeping bag", "airbed"]],
   [/\b(cook\w*|dinner|breakfast|food|meals?)\b/, ["camping stove", "cookware"]],
   [/\b(thirst\w*|water|hydrat\w*)\b/, ["hydration", "water"]],
