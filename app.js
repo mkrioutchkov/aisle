@@ -26,10 +26,10 @@
   // A hiccup on the way to the server shouldn't cost the shopper an answer, so anything but a clear refusal is tried once more.
   const RETRY_MS = 400;
   const pause = () => new Promise(done => setTimeout(done, RETRY_MS));
-  const refused = res => res && (res.ok || res.status < 500);
+  const settled = res => res && (res.ok || res.status < 500);
   const postTwice = async body => {
     const res = await post(body).catch(() => null);
-    if (refused(res)) return res;
+    if (settled(res)) return res;
     await pause();
     return post(body);
   };
