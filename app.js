@@ -325,8 +325,6 @@
 
   // ---------- conversation ----------
   const feed = $("#feed");
-  const fine = document.createElement("p");
-  fine.className = "fine";
   const LOGKEY = `aisle-log-${slug}`;
 
   function addTurn(q) {
@@ -334,7 +332,7 @@
     const el = document.createElement("section");
     el.className = "turn";
     el.innerHTML = `<div class="you"><span>${esc(q)}</span></div><div class="answer"><p class="say">...</p></div>`;
-    feed.insertBefore(el, fine);
+    feed.appendChild(el);
     return el;
   }
 
@@ -482,8 +480,6 @@
     $("#storeName").textContent = `Anaconda ${storeName}`;
     document.title = `Find it in store · Anaconda ${storeName}`;
     IDX = buildIndex(DB.products, DB.aisles);
-    fine.textContent = `Independent demo by Max Krioutchkov, not an official Anaconda service. Products and prices from anacondastores.com (${DB.generated}); aisle, bay and stock numbers are sample data.`;
-    feed.appendChild(fine);
     if (params.has("staff")) staffPanel();
     if (params.get("q")) ask(params.get("q"));
   }
