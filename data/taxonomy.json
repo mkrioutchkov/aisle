@@ -1,0 +1,4967 @@
+{
+"12V Control Boxes & Hubs": {
+"accessory": true,
+"aisle": 17,
+"aka": [
+"12v power hub",
+"power distribution box",
+"12v control box",
+"fuse block",
+"12v hub"
+]
+},
+"4WD Awnings": {
+"accessory": true,
+"aisle": 17,
+"aka": [
+"car awning",
+"roof awning",
+"pull out awning",
+"4wd shade"
+]
+},
+"4WD Drawers": {
+"accessory": true,
+"aisle": 17,
+"aka": [
+"rear drawers",
+"ute drawers",
+"cargo drawers",
+"storage drawers"
+]
+},
+"4WD Lighting Wiring & Accessories": {
+"accessory": true,
+"aisle": 17,
+"aka": [
+"driving light harness",
+"light wiring loom",
+"spotlight wiring",
+"headlight wiring kit"
+]
+},
+"4WD Lights": {
+"accessory": true,
+"aisle": 17,
+"aka": [
+"driving lights",
+"spotties",
+"light bars",
+"fog lights",
+"led spotlights"
+]
+},
+"4WD Recovery Gear": {
+"accessory": false,
+"aisle": 17,
+"aka": [
+"snatch strap",
+"recovery tracks",
+"winch",
+"maxtrax",
+"bogged",
+"traction",
+"recovery kit",
+"shackles"
+]
+},
+"4WD Storage & Cargo": {
+"accessory": true,
+"aisle": 17,
+"aka": [
+"cargo barrier",
+"roof bags",
+"boot organiser",
+"cargo net"
+]
+},
+"4WD Storage Bags": {
+"accessory": true,
+"aisle": 17,
+"aka": [
+"roof bag",
+"cargo bag",
+"ute bag",
+"wheel bag"
+]
+},
+"4WD Storage Boxes": {
+"accessory": true,
+"aisle": 17,
+"aka": [
+"roof box",
+"storage container",
+"camp box",
+"box"
+]
+},
+"AC to DC Chargers": {
+"accessory": true,
+"aisle": 17,
+"aka": [
+"battery charger",
+"12v charger",
+"dc power supply",
+"mains charger"
+]
+},
+"Action & Adventure Cameras": {
+"accessory": false,
+"aisle": 20,
+"aka": [
+"gopro",
+"action cam",
+"helmet camera",
+"underwater camera",
+"adventure camera"
+]
+},
+"Adults Bike Helmets": {
+"accessory": true,
+"aisle": 19,
+"aka": [
+"bike helmet",
+"cycling helmet",
+"mips helmet",
+"road helmet"
+]
+},
+"Air Compressors": {
+"accessory": true,
+"aisle": 17,
+"aka": [
+"tyre inflator",
+"portable compressor",
+"flat tyre pump",
+"4wd compressor"
+]
+},
+"Air Pumps": {
+"accessory": true,
+"aisle": 2,
+"aka": [
+"air mattress pump",
+"inflator",
+"electric pump",
+"blow up pump"
+]
+},
+"Airbeds & Inflatable Air Mattresses": {
+"accessory": false,
+"aisle": 2,
+"aka": [
+"air mattress",
+"inflatable bed",
+"blow up mattress",
+"air bed"
+]
+},
+"Anchor Winches": {
+"accessory": true,
+"aisle": 13,
+"aka": [
+"electric anchor winch",
+"drum winch",
+"anchor drum",
+"windlass"
+]
+},
+"Anchors": {
+"accessory": true,
+"aisle": 13,
+"aka": [
+"boat anchor",
+"sand anchor",
+"plough anchor",
+"reef anchor",
+"pick anchor"
+]
+},
+"Anchors & Mooring": {
+"accessory": true,
+"aisle": 13,
+"aka": [
+"anchor rope",
+"mooring lines",
+"bow shackles",
+"anchoring gear"
+]
+},
+"Auto Accessories": {
+"accessory": true,
+"aisle": 17,
+"aka": [
+"car seat covers",
+"dash mat",
+"car mats",
+"steering wheel cover"
+]
+},
+"Baby Seats, Child Carriers & Trailers": {
+"accessory": true,
+"aisle": 19,
+"aka": [
+"bike trailer",
+"kid bike seat",
+"child carrier",
+"baby bike seat"
+]
+},
+"Bait Boards": {
+"accessory": true,
+"aisle": 12,
+"aka": [
+"bait table",
+"cutting board",
+"fillet board",
+"bait prep board"
+]
+},
+"Bait Buckets & Lids": {
+"accessory": true,
+"aisle": 12,
+"aka": [
+"bait bucket",
+"burley bucket",
+"live bait bucket",
+"bucket lid"
+]
+},
+"Bait Pumps & Aerators": {
+"accessory": true,
+"aisle": 12,
+"aka": [
+"live bait pump",
+"aerator",
+"air pump for bait",
+"bait aerator"
+]
+},
+"Bait, Burley & Scents": {
+"accessory": false,
+"aisle": 12,
+"aka": [
+"pillies",
+"prawns",
+"chicken pellets",
+"fish attractant",
+"berley",
+"dough bait"
+]
+},
+"Baitcaster Combos": {
+"accessory": false,
+"aisle": 10,
+"aka": [
+"baitcast rod reel",
+"overhead combo",
+"barra combo",
+"baitcast outfit"
+]
+},
+"Baitcaster Reels": {
+"accessory": false,
+"aisle": 10,
+"aka": [
+"overhead reel",
+"barra reel",
+"baitcast reel"
+]
+},
+"Baitcaster Rods": {
+"accessory": false,
+"aisle": 9,
+"aka": [
+"overhead rod",
+"barra rod",
+"baitcast rod"
+]
+},
+"Battery Boxes & Trays": {
+"accessory": true,
+"aisle": 17,
+"aka": [
+"battery box",
+"dual battery tray",
+"12v battery box",
+"battery holder"
+]
+},
+"Beach Accessories": {
+"accessory": true,
+"aisle": 16,
+"aka": [
+"beach umbrella",
+"sand pegs",
+"beach mat",
+"shell bag",
+"sun shelter"
+]
+},
+"Beach Chairs & Loungers": {
+"accessory": false,
+"aisle": 16,
+"aka": [
+"deck chair",
+"sun lounger",
+"folding chair",
+"beach lounger"
+]
+},
+"Beach Tents": {
+"accessory": false,
+"aisle": 16,
+"aka": [
+"beach shelter",
+"sun shelter",
+"pop up beach tent",
+"beach cabana"
+]
+},
+"Beach Tents & Sunshades": {
+"accessory": false,
+"aisle": 16,
+"aka": [
+"beach shade",
+"sun shade",
+"beach cabana",
+"pop up sun shelter"
+]
+},
+"Beach Towels": {
+"accessory": false,
+"aisle": 16,
+"aka": [
+"towel",
+"quick dry towel",
+"microfibre towel",
+"sand free towel"
+]
+},
+"Beach Toys": {
+"accessory": false,
+"aisle": 16,
+"aka": [
+"sand toys",
+"bucket and spade",
+"beach ball",
+"frisbee",
+"boogie board"
+]
+},
+"Beach Trolleys & Wagons": {
+"accessory": false,
+"aisle": 16,
+"aka": [
+"beach cart",
+"sand wagon",
+"folding wagon",
+"beach trolley"
+]
+},
+"Beach and Pool Inflatables": {
+"accessory": false,
+"aisle": 16,
+"aka": [
+"pool float",
+"li-lo",
+"inflatables",
+"floaties",
+"pool ring"
+]
+},
+"Bike Accessories": {
+"accessory": true,
+"aisle": 19,
+"aka": [
+"bike pump",
+"mudguards",
+"kickstand",
+"handlebar grips",
+"saddle bag"
+]
+},
+"Bike Bottle Cages & Hydration": {
+"accessory": true,
+"aisle": 19,
+"aka": [
+"water bottle cage",
+"drink holder",
+"hydration pack",
+"bidon cage"
+]
+},
+"Bike Cleaners & Lubricants": {
+"accessory": true,
+"aisle": 19,
+"aka": [
+"chain lube",
+"bike wash",
+"degreaser",
+"dry lube"
+]
+},
+"Bike Computers & Speedometers": {
+"accessory": true,
+"aisle": 19,
+"aka": [
+"bike computer",
+"speedo",
+"cycle computer",
+"gps bike computer"
+]
+},
+"Bike Lights": {
+"accessory": true,
+"aisle": 19,
+"aka": [
+"bicycle lights",
+"front light",
+"rear light",
+"safety lights",
+"blinker"
+]
+},
+"Bike Locks": {
+"accessory": true,
+"aisle": 19,
+"aka": [
+"chain lock",
+"d-lock",
+"cable lock",
+"u-lock",
+"bike lock"
+]
+},
+"Bike Panniers & Bags": {
+"accessory": true,
+"aisle": 19,
+"aka": [
+"pannier bag",
+"saddle bag",
+"handlebar bag",
+"bike bag"
+]
+},
+"Bike Racks & Roof Racks": {
+"accessory": true,
+"aisle": 17,
+"aka": [
+"roof racks",
+"bike carrier",
+"towball bike rack",
+"car roof rack"
+]
+},
+"Bike Saddles": {
+"accessory": true,
+"aisle": 19,
+"aka": [
+"bike seat",
+"saddle",
+"seat post",
+"comfort seat"
+]
+},
+"Bike Spare Parts & Repair": {
+"accessory": true,
+"aisle": 19,
+"aka": [
+"tube",
+"puncture",
+"inner tube",
+"chain",
+"brake pads",
+"spare parts",
+"flat tyre",
+"repair kit"
+]
+},
+"Bike Tools & Repair Kits": {
+"accessory": true,
+"aisle": 19,
+"aka": [
+"puncture repair",
+"multi tool",
+"tyre levers",
+"bike pump",
+"patch kit"
+]
+},
+"Bike Tubes": {
+"accessory": true,
+"aisle": 19,
+"aka": [
+"inner tube",
+"tyre tube",
+"tube",
+"puncture tube"
+]
+},
+"Bike Tyres": {
+"accessory": true,
+"aisle": 19,
+"aka": [
+"bicycle tyre",
+"road tyre",
+"mountain bike tyre",
+"hybrid tyre"
+]
+},
+"Bilge Pumps & Hoses": {
+"accessory": true,
+"aisle": 13,
+"aka": [
+"bilge pump",
+"boat pump",
+"bilge hose",
+"manual bilge pump"
+]
+},
+"Biminis & Accessories": {
+"accessory": true,
+"aisle": 13,
+"aka": [
+"bimini top",
+"boat canopy",
+"bimini cover",
+"boat bimini"
+]
+},
+"Binoculars": {
+"accessory": false,
+"aisle": 20,
+"aka": [
+"binos",
+"binocs",
+"field glasses",
+"spotting scope",
+"compact binoculars"
+]
+},
+"Board Shorts": {
+"accessory": false,
+"aisle": 21,
+"aka": [
+"boardies",
+"swim shorts",
+"trunks",
+"surf shorts",
+"rash shorts"
+]
+},
+"Boat Battery Switches & Switch Panels": {
+"accessory": true,
+"aisle": 13,
+"aka": [
+"battery switch",
+"switch panel",
+"marine switch",
+"isolator switch"
+]
+},
+"Boat Cleats & Bollards": {
+"accessory": true,
+"aisle": 13,
+"aka": [
+"cleats",
+"mooring cleats",
+"dock cleats",
+"boat cleats"
+]
+},
+"Boat Covers": {
+"accessory": true,
+"aisle": 13,
+"aka": [
+"boat tarp",
+"motor cover",
+"boat cover",
+"trailer cover"
+]
+},
+"Boat Drain Plugs & Bungs": {
+"accessory": true,
+"aisle": 13,
+"aka": [
+"drain plug",
+"bung",
+"boat bung",
+"drain bung"
+]
+},
+"Boat Electrical & Plumbing": {
+"accessory": true,
+"aisle": 13,
+"aka": [
+"marine wiring",
+"boat plumbing",
+"deck filler",
+"electrical panel"
+]
+},
+"Boat Fenders & Floats": {
+"accessory": true,
+"aisle": 13,
+"aka": [
+"fenders",
+"boat bumpers",
+"mooring floats",
+"dock fenders"
+]
+},
+"Boat Fit Out": {
+"accessory": true,
+"aisle": 13,
+"aka": [
+"boat fitout",
+"boat parts",
+"marine fit out",
+"deck hardware"
+]
+},
+"Boat Paddles & Oars": {
+"accessory": true,
+"aisle": 13,
+"aka": [
+"oar",
+"paddle",
+"rowing oars",
+"boat paddle",
+"wooden oar"
+]
+},
+"Boat Seats & Pedestals": {
+"accessory": true,
+"aisle": 13,
+"aka": [
+"boat seat",
+"pedestal",
+"leaning post",
+"seat mount"
+]
+},
+"Boat Stickers & Registration Labels": {
+"accessory": true,
+"aisle": 13,
+"aka": [
+"rego stickers",
+"boat numbers",
+"registration decals",
+"hull numbers",
+"boat labels"
+]
+},
+"Boat Towing & Tie-Downs": {
+"accessory": true,
+"aisle": 13,
+"aka": [
+"tow straps",
+"tie downs",
+"transom straps",
+"ratchet straps",
+"boat tie down"
+]
+},
+"Boating & Marine": {
+"accessory": false,
+"aisle": 13,
+"aka": [
+"marine",
+"boating gear",
+"boat accessories",
+"safety gear",
+"boating supplies"
+]
+},
+"Boats": {
+"accessory": false,
+"aisle": 13,
+"aka": [
+"tinny",
+"tinnie",
+"dinghy",
+"tinnie boat",
+"aluminium boat"
+]
+},
+"Bodyboards & Skimboards": {
+"accessory": false,
+"aisle": 16,
+"aka": [
+"boogie board",
+"body board",
+"skim board",
+"wave board"
+]
+},
+"Bow Mount Motors": {
+"accessory": false,
+"aisle": 13,
+"aka": [
+"electric motor",
+"leccy motor",
+"bow mount",
+"trolling motor",
+"minn kota"
+]
+},
+"Brag Mats & Fish Rulers": {
+"accessory": false,
+"aisle": 11,
+"aka": [
+"brag mat",
+"fish ruler",
+"measuring mat",
+"fish measure"
+]
+},
+"Braid Line": {
+"accessory": false,
+"aisle": 10,
+"aka": [
+"braid",
+"braided line",
+"pe line",
+"fishing line"
+]
+},
+"Braid Scissors": {
+"accessory": true,
+"aisle": 10,
+"aka": [
+"braid cutters",
+"line scissors",
+"fishing scissors",
+"snips"
+]
+},
+"Burley Pellets & Pollard": {
+"accessory": false,
+"aisle": 12,
+"aka": [
+"burley",
+"berley",
+"chook pellets",
+"fish attractant",
+"pollard"
+]
+},
+"Burley Pots & Cages": {
+"accessory": true,
+"aisle": 12,
+"aka": [
+"burley pot",
+"berley cage",
+"burley dispenser",
+"burley bomb"
+]
+},
+"Cables, Adapters & Accessories": {
+"accessory": true,
+"aisle": 20,
+"aka": [
+"adapter",
+"cable",
+"charger",
+"usb cable",
+"power adapter",
+"phone charger"
+]
+},
+"Camp Cooking Appliances": {
+"accessory": false,
+"aisle": 4,
+"aka": [
+"camp cooker",
+"gas cooker",
+"portable stove",
+"camp oven"
+]
+},
+"Camp Cooking Supplies": {
+"accessory": false,
+"aisle": 4,
+"aka": [
+"cookware",
+"pots pans",
+"camp pots",
+"billy",
+"camp cookware"
+]
+},
+"Camp Food": {
+"accessory": false,
+"aisle": 4,
+"aka": [
+"dehydrated meals",
+"camp meals",
+"freeze dried",
+"rations",
+"tinned food"
+]
+},
+"Camp Kitchens": {
+"accessory": false,
+"aisle": 4,
+"aka": [
+"camp kitchen",
+"kitchen box",
+"chuck box",
+"camping kitchen"
+]
+},
+"Camp Tableware": {
+"accessory": false,
+"aisle": 4,
+"aka": [
+"plates bowls",
+"camp plates",
+"cutlery",
+"mugs",
+"camp tableware"
+]
+},
+"Campers & Hybrids": {
+"accessory": false,
+"aisle": 1,
+"aka": [
+"hybrid camper",
+"camper trailer",
+"pop top",
+"offroad camper"
+]
+},
+"Camping & Hiking Cookware": {
+"accessory": false,
+"aisle": 4,
+"aka": [
+"hiking cookware",
+"backpacking pot",
+"camp pots",
+"billy"
+]
+},
+"Camping & Travel Pillows": {
+"accessory": false,
+"aisle": 2,
+"aka": [
+"camp pillow",
+"travel pillow",
+"neck pillow",
+"inflatable pillow"
+]
+},
+"Camping Air Conditioners & Fans": {
+"accessory": false,
+"aisle": 7,
+"aka": [
+"camp fan",
+"portable fan",
+"camp aircon",
+"12v fan"
+]
+},
+"Camping BBQs & Smokers": {
+"accessory": false,
+"aisle": 4,
+"aka": [
+"camp bbq",
+"portable bbq",
+"smoker",
+"weber",
+"camp grill"
+]
+},
+"Camping Batteries": {
+"accessory": false,
+"aisle": 6,
+"aka": [
+"12v battery",
+"deep cycle",
+"agm battery",
+"lithium battery",
+"power box"
+]
+},
+"Camping Blankets & Quilts": {
+"accessory": false,
+"aisle": 2,
+"aka": [
+"camp blanket",
+"doona",
+"quilt",
+"swag blanket"
+]
+},
+"Camping Chairs": {
+"accessory": false,
+"aisle": 3,
+"aka": [
+"camp chair",
+"folding chair",
+"moon chair",
+"director chair"
+]
+},
+"Camping Cupboards & Pantry": {
+"accessory": false,
+"aisle": 3,
+"aka": [
+"camp cupboard",
+"pantry box",
+"camp storage",
+"camp cabinet"
+]
+},
+"Camping Fuel & Fire": {
+"accessory": false,
+"aisle": 7,
+"aka": [
+"firelighters",
+"heat beads",
+"fire starters",
+"fuel",
+"metho"
+]
+},
+"Camping Heaters": {
+"accessory": false,
+"aisle": 7,
+"aka": [
+"camp heater",
+"gas heater",
+"portable heater"
+]
+},
+"Camping Lanterns": {
+"accessory": false,
+"aisle": 6,
+"aka": [
+"lantern",
+"camp light",
+"led lantern"
+]
+},
+"Camping Lighting": {
+"accessory": false,
+"aisle": 6,
+"aka": [
+"camp lights",
+"torch",
+"headlamp",
+"lighting",
+"strip light"
+]
+},
+"Camping Showers & Accessories": {
+"accessory": false,
+"aisle": 7,
+"aka": [
+"camp shower",
+"portable shower",
+"shower tent",
+"solar shower"
+]
+},
+"Camping Stools": {
+"accessory": false,
+"aisle": 3,
+"aka": [
+"camp stool",
+"folding stool",
+"stool"
+]
+},
+"Camping Stoves & BBQs": {
+"accessory": false,
+"aisle": 4,
+"aka": [
+"camp stove",
+"gas stove",
+"portable stove",
+"bbq",
+"cooker"
+]
+},
+"Camping Stretchers & Beds": {
+"accessory": false,
+"aisle": 2,
+"aka": [
+"stretcher",
+"camp bed",
+"swag stretcher",
+"folding bed"
+]
+},
+"Camping Tables": {
+"accessory": false,
+"aisle": 3,
+"aka": [
+"camp table",
+"folding table",
+"table"
+]
+},
+"Camping Tents": {
+"accessory": false,
+"aisle": 1,
+"aka": [
+"tent",
+"dome tent",
+"swag",
+"pop up tent"
+]
+},
+"Camping Toilets": {
+"accessory": false,
+"aisle": 7,
+"aka": [
+"dunny",
+"porta potti",
+"portable toilet",
+"camp toilet",
+"toilet"
+]
+},
+"Camping Toilets & Showers": {
+"accessory": false,
+"aisle": 7,
+"aka": [
+"dunny",
+"porta potti",
+"camp shower",
+"toilet tent",
+"portable toilet"
+]
+},
+"Camping Water Storage Containers": {
+"accessory": false,
+"aisle": 7,
+"aka": [
+"jerry can",
+"water jug",
+"water carrier",
+"drinking water",
+"water drum",
+"drum",
+"water bottle",
+"h2o"
+]
+},
+"Car & Camping Fridge Freezers": {
+"accessory": false,
+"aisle": 5,
+"aka": [
+"esky",
+"fridge",
+"freezer",
+"12v fridge",
+"cooler",
+"beers cold",
+"ice box",
+"camp fridge"
+]
+},
+"Car Care & Maintenence": {
+"accessory": false,
+"aisle": 17,
+"aka": [
+"car polish",
+"car wash",
+"wax",
+"detailing",
+"tyre shine",
+"sponge",
+"chamois",
+"car cleaning"
+]
+},
+"Car Fridge Slides": {
+"accessory": true,
+"aisle": 5,
+"aka": [
+"fridge slide",
+"fridge mount",
+"fridge bracket",
+"slide out fridge",
+"esky slide"
+]
+},
+"Caravan Accessories": {
+"accessory": true,
+"aisle": 18,
+"aka": [
+"van bits",
+"van parts",
+"caravan bits",
+"van accessories",
+"trailer bits"
+]
+},
+"Caravan Awning Accessories": {
+"accessory": true,
+"aisle": 18,
+"aka": [
+"annexe",
+"annexe parts",
+"awning parts",
+"awning brackets",
+"awning arms",
+"awning tie down",
+"deflappers"
+]
+},
+"Caravan Bearings": {
+"accessory": true,
+"aisle": 18,
+"aka": [
+"wheel bearings",
+"bearing kit",
+"trailer bearings",
+"bearings"
+]
+},
+"Caravan Covers": {
+"accessory": true,
+"aisle": 18,
+"aka": [
+"van cover",
+"caravan cover",
+"trailer cover",
+"protective cover"
+]
+},
+"Caravan Hoses": {
+"accessory": true,
+"aisle": 18,
+"aka": [
+"water hose",
+"van hose",
+"hose",
+"drinking hose",
+"fresh water hose"
+]
+},
+"Caravan Levelling Ramps": {
+"accessory": true,
+"aisle": 18,
+"aka": [
+"levelling ramps",
+"level ramps",
+"ramps",
+"level blocks",
+"levellers"
+]
+},
+"Caravan Mats & Flooring": {
+"accessory": false,
+"aisle": 18,
+"aka": [
+"annexe mat",
+"floor mat",
+"van mat",
+"flooring",
+"fake grass",
+"ground mat"
+]
+},
+"Caravan Power Accessories": {
+"accessory": true,
+"aisle": 18,
+"aka": [
+"power lead",
+"extension lead",
+"amp lead",
+"van power",
+"power inlet",
+"power point"
+]
+},
+"Caravan Privacy Screens": {
+"accessory": true,
+"aisle": 18,
+"aka": [
+"privacy screen",
+"screen",
+"shade screen",
+"annexe screen",
+"sun screen"
+]
+},
+"Caravan Safety & Security": {
+"accessory": true,
+"aisle": 18,
+"aka": [
+"van security",
+"van safety",
+"security",
+"safety gear",
+"safe"
+]
+},
+"Caravan Smoke Alarms & Detectors": {
+"accessory": true,
+"aisle": 18,
+"aka": [
+"smoke alarm",
+"smoke detector",
+"fire alarm",
+"alarm"
+]
+},
+"Caravan Stabilisers": {
+"accessory": true,
+"aisle": 18,
+"aka": [
+"stabiliser",
+"stabiliser legs",
+"steady legs",
+"stabilisers",
+"jack legs"
+]
+},
+"Caravan Starter Packs": {
+"accessory": false,
+"aisle": 18,
+"aka": [
+"starter kit",
+"starter pack",
+"van starter kit"
+]
+},
+"Caravan Steps": {
+"accessory": true,
+"aisle": 18,
+"aka": [
+"step",
+"van step",
+"stairs",
+"step stool"
+]
+},
+"Caravan Storage Accessories": {
+"accessory": true,
+"aisle": 18,
+"aka": [
+"storage",
+"van storage",
+"storage boxes",
+"storage rack"
+]
+},
+"Caravan TV Antenna & Aerials": {
+"accessory": true,
+"aisle": 18,
+"aka": [
+"tv antenna",
+"aerial",
+"antenna",
+"tv aerial",
+"reception"
+]
+},
+"Caravan Water Filters": {
+"accessory": true,
+"aisle": 18,
+"aka": [
+"water filter",
+"filter",
+"inline filter",
+"water purifier"
+]
+},
+"Caravan Water Pumps": {
+"accessory": true,
+"aisle": 18,
+"aka": [
+"water pump",
+"pump",
+"van pump",
+"12v pump"
+]
+},
+"Caravan Water Tanks": {
+"accessory": false,
+"aisle": 18,
+"aka": [
+"water tank",
+"fresh water tank",
+"tank",
+"van tank"
+]
+},
+"Caravan Wheel Chocks": {
+"accessory": true,
+"aisle": 18,
+"aka": [
+"chocks",
+"wheel chock",
+"chock",
+"wheel blocks"
+]
+},
+"Caravan Wheel Locks & Clamps": {
+"accessory": true,
+"aisle": 18,
+"aka": [
+"wheel lock",
+"wheel clamp",
+"clamp",
+"locking nut"
+]
+},
+"Cast Nets": {
+"accessory": false,
+"aisle": 12,
+"aka": [
+"cast net",
+"throw net",
+"net",
+"bait net"
+]
+},
+"Catch Bags & Fish Cooler Bags": {
+"accessory": false,
+"aisle": 12,
+"aka": [
+"catch bag",
+"fish bag",
+"cooler bag",
+"keep bag",
+"fish cooler"
+]
+},
+"Chandlery & Mounting Hardware": {
+"accessory": true,
+"aisle": 13,
+"aka": [
+"chandlery",
+"mounting hardware",
+"brackets",
+"cleats",
+"boat hardware",
+"stainless fittings"
+]
+},
+"Commuter Scooters": {
+"accessory": false,
+"aisle": 19,
+"aka": [
+"scooter",
+"commuter scooter",
+"electric scooter",
+"e-scooter",
+"push scooter"
+]
+},
+"Compact Hiking Stoves & Fuel": {
+"accessory": false,
+"aisle": 4,
+"aka": [
+"camp stove",
+"hiking stove",
+"gas stove",
+"burner",
+"fuel",
+"gas canister",
+"trangia"
+]
+},
+"Compasses": {
+"accessory": false,
+"aisle": 8,
+"aka": [
+"compass",
+"navigation compass",
+"bearing compass"
+]
+},
+"Coolers": {
+"accessory": false,
+"aisle": 5,
+"aka": [
+"esky",
+"ice box",
+"chilly bin",
+"cooler box",
+"beers cold",
+"ice chest"
+]
+},
+"Crab Pots & Bait Nets": {
+"accessory": false,
+"aisle": 12,
+"aka": [
+"crab pot",
+"bait net",
+"crab net",
+"pot",
+"crab trap",
+"yabby net"
+]
+},
+"DC to DC Chargers & Inverters": {
+"accessory": false,
+"aisle": 6,
+"aka": [
+"dc charger",
+"inverter",
+"dc to dc",
+"battery charger",
+"dcdc",
+"power inverter"
+]
+},
+"Day Packs & Hiking Backpacks": {
+"accessory": false,
+"aisle": 8,
+"aka": [
+"day pack",
+"backpack",
+"hiking pack",
+"rucksack",
+"daypack",
+"pack"
+]
+},
+"Dog Life Jackets & PFDs": {
+"accessory": false,
+"aisle": 14,
+"aka": [
+"dog life jacket",
+"dog pfd",
+"dog vest",
+"pet life jacket",
+"dog floatie"
+]
+},
+"Driving Lights": {
+"accessory": false,
+"aisle": 17,
+"aka": [
+"driving lights",
+"spotties",
+"light bar",
+"spotlights",
+"led bar",
+"driving lamps"
+]
+},
+"Drones": {
+"accessory": false,
+"aisle": 20,
+"aka": [
+"drone",
+"quadcopter",
+"camera drone",
+"uav"
+]
+},
+"Dry Bags & Storage": {
+"accessory": false,
+"aisle": 8,
+"aka": [
+"dry bag",
+"dry sack",
+"waterproof bag",
+"dry pack"
+]
+},
+"Duffle Bags": {
+"accessory": false,
+"aisle": 8,
+"aka": [
+"duffle",
+"duffel",
+"duffle bag",
+"gear bag",
+"sports bag"
+]
+},
+"Electric Bikes": {
+"accessory": false,
+"aisle": 19,
+"aka": [
+"e-bike",
+"ebike",
+"battery bike",
+"powered bike"
+]
+},
+"Electric Motors": {
+"accessory": true,
+"aisle": 14,
+"aka": [
+"trolling motor",
+"kayak motor",
+"boat motor",
+"electric outboard"
+]
+},
+"Electric Reels": {
+"accessory": false,
+"aisle": 10,
+"aka": [
+"power reel",
+"electric fishing reel",
+"battery reel"
+]
+},
+"Electric Scooters": {
+"accessory": false,
+"aisle": 19,
+"aka": [
+"e-scooter",
+"escooter",
+"scooter"
+]
+},
+"Electronics": {
+"accessory": false,
+"aisle": 20,
+"aka": [
+"gadgets",
+"charcoal",
+"depth sounder",
+"sounders"
+]
+},
+"Epirbs & Flares": {
+"accessory": false,
+"aisle": 7,
+"aka": [
+"epirb",
+"beacon",
+"flare",
+"plb",
+"emergency beacon",
+"signals"
+]
+},
+"Family Tents": {
+"accessory": false,
+"aisle": 1,
+"aka": [
+"family tent",
+"big tent",
+"large tent",
+"cabin tent",
+"6 man tent"
+]
+},
+"Fire Pit Accessories": {
+"accessory": true,
+"aisle": 7,
+"aka": [
+"fire pit cover",
+"fire pit lid",
+"spark screen",
+"fire pit grill"
+]
+},
+"Fire Pits": {
+"accessory": false,
+"aisle": 7,
+"aka": [
+"firepit",
+"campfire",
+"brazier",
+"fire bowl"
+]
+},
+"Fire Safety Equipment": {
+"accessory": false,
+"aisle": 7,
+"aka": [
+"fire extinguisher",
+"fire blanket",
+"smoke alarm"
+]
+},
+"First Aid": {
+"accessory": false,
+"aisle": 7,
+"aka": [
+"first aid kit",
+"bandages",
+"medical kit",
+"splints"
+]
+},
+"Fish Finders": {
+"accessory": false,
+"aisle": 20,
+"aka": [
+"fishfinder",
+"depth sounder",
+"sonar",
+"sounders"
+]
+},
+"Fish Oil & Scent Gels": {
+"accessory": false,
+"aisle": 12,
+"aka": [
+"fish oil",
+"scent gel",
+"bait additive",
+"attractant"
+]
+},
+"Fishing Books & Guides": {
+"accessory": false,
+"aisle": 20,
+"aka": [
+"fishing book",
+"fishing guide",
+"tackle guide",
+"fishing map"
+]
+},
+"Fishing Clothing & Apparel": {
+"accessory": false,
+"aisle": 21,
+"aka": [
+"fishing shirt",
+"fishing gear clothing",
+"fishing clothes",
+"fishing apparel"
+]
+},
+"Fishing Gloves": {
+"accessory": false,
+"aisle": 21,
+"aka": [
+"fishing glove",
+"fish handling glove",
+"saltwater gloves"
+]
+},
+"Fishing Hats & Caps": {
+"accessory": false,
+"aisle": 21,
+"aka": [
+"fishing hat",
+"bucket hat",
+"fishing cap",
+"wide brim hat"
+]
+},
+"Fishing Hooks": {
+"accessory": false,
+"aisle": 11,
+"aka": [
+"hooks",
+"fish hooks",
+"circle hooks",
+"j hooks",
+"gang hooks"
+]
+},
+"Fishing Jackets": {
+"accessory": false,
+"aisle": 21,
+"aka": [
+"fishing jacket",
+"wet weather jacket",
+"rain jacket",
+"storm jacket"
+]
+},
+"Fishing Kayaks": {
+"accessory": false,
+"aisle": 14,
+"aka": [
+"fishing kayak",
+"kayak",
+"sit on top kayak",
+"angler kayak"
+]
+},
+"Fishing Line": {
+"accessory": false,
+"aisle": 11,
+"aka": [
+"line",
+"braid",
+"mono",
+"fishing string",
+"leader"
+]
+},
+"Fishing Lures": {
+"accessory": false,
+"aisle": 11,
+"aka": [
+"lures",
+"soft plastics",
+"spinnerbait",
+"popper",
+"jig",
+"hard body"
+]
+},
+"Fishing Neck Gaiters, Face Buffs & Masks": {
+"accessory": false,
+"aisle": 21,
+"aka": [
+"face buff",
+"neck gaiter",
+"sun mask",
+"buff"
+]
+},
+"Fishing Pants & Shorts": {
+"accessory": false,
+"aisle": 21,
+"aka": [
+"fishing pants",
+"fishing shorts",
+"cargo shorts"
+]
+},
+"Fishing Reel Covers": {
+"accessory": true,
+"aisle": 10,
+"aka": [
+"reel cover",
+"reel protector",
+"reel case"
+]
+},
+"Fishing Reels": {
+"accessory": false,
+"aisle": 10,
+"aka": [
+"reel",
+"spinning reel",
+"baitcaster",
+"overhead reel",
+"egg beater"
+]
+},
+"Fishing Shirts": {
+"accessory": false,
+"aisle": 21,
+"aka": [
+"fishing shirt",
+"long sleeve fishing shirt",
+"sun shirt",
+"performance shirt"
+]
+},
+"Fishing Shoes & Boots": {
+"accessory": false,
+"aisle": 24,
+"aka": [
+"fishing boots",
+"wading boots",
+"deck shoes",
+"boat shoes"
+]
+},
+"Fishing Tools": {
+"accessory": false,
+"aisle": 11,
+"aka": [
+"pliers",
+"hook remover",
+"fish gripper",
+"line cutter"
+]
+},
+"Floats": {
+"accessory": false,
+"aisle": 11,
+"aka": [
+"float",
+"bobber",
+"pencil float"
+]
+},
+"Flushers": {
+"accessory": false,
+"aisle": 12,
+"aka": [
+"flush",
+"flusher"
+]
+},
+"Foam Life Jackets & PFDs": {
+"accessory": false,
+"aisle": 13,
+"aka": [
+"life jacket",
+"life vest",
+"pfd",
+"life preserver",
+"flotation vest"
+]
+},
+"Foam Mattresses": {
+"accessory": false,
+"aisle": 2,
+"aka": [
+"camp mattress",
+"foam mat",
+"swag mattress",
+"stretcher mattress"
+]
+},
+"Fridge Covers & Power": {
+"accessory": true,
+"aisle": 5,
+"aka": [
+"fridge cover",
+"fridge bag",
+"fridge power",
+"fridge lead"
+]
+},
+"Fuel Containers": {
+"accessory": false,
+"aisle": 17,
+"aka": [
+"jerry can",
+"fuel can",
+"petrol can",
+"diesel can"
+]
+},
+"Fuel Hoses, Filters & Tank Fittings": {
+"accessory": true,
+"aisle": 17,
+"aka": [
+"fuel hose",
+"fuel filter",
+"tank fitting",
+"fuel line"
+]
+},
+"Fuel Tanks": {
+"accessory": false,
+"aisle": 13,
+"aka": [
+"fuel tank",
+"boat tank",
+"jerry can",
+"petrol tank"
+]
+},
+"GPS Navigators": {
+"accessory": false,
+"aisle": 20,
+"aka": [
+"gps",
+"nav",
+"navigation",
+"gps unit",
+"offroad gps"
+]
+},
+"Games & Entertainment": {
+"accessory": false,
+"aisle": 20,
+"aka": [
+"games",
+"board games",
+"camp games",
+"playing cards"
+]
+},
+"Gas Bottle Holders": {
+"accessory": true,
+"aisle": 18,
+"aka": [
+"gas bottle holder",
+"gas holder",
+"bottle bracket",
+"gas bottle mount"
+]
+},
+"Gazebo Accessories": {
+"accessory": true,
+"aisle": 3,
+"aka": [
+"gazebo pegs",
+"gazebo weights",
+"gazebo sandbags",
+"gazebo legs",
+"marquee parts",
+"gazebo ropes",
+"gazebo feet",
+"gazebo spares"
+]
+},
+"Gazebo Walls": {
+"accessory": true,
+"aisle": 3,
+"aka": [
+"gazebo sides",
+"marquee walls",
+"gazebo panels",
+"gazebo screen",
+"gazebo side wall",
+"marquee sides",
+"wind wall"
+]
+},
+"Generators": {
+"accessory": false,
+"aisle": 6,
+"aka": [
+"gennie",
+"genny",
+"inverter",
+"portable power",
+"genset",
+"silent generator",
+"camp power",
+"power station"
+]
+},
+"Hammocks": {
+"accessory": false,
+"aisle": 2,
+"aka": [
+"swing bed",
+"camp hammock",
+"tree hammock",
+"lazy bed",
+"hang bed"
+]
+},
+"Handlines": {
+"accessory": false,
+"aisle": 9,
+"aka": [
+"hand line",
+"handreel",
+"hand reel",
+"line reel",
+"hand caster",
+"hand fishing line"
+]
+},
+"Hard Body Lures": {
+"accessory": false,
+"aisle": 11,
+"aka": [
+"hardbody",
+"hard bait",
+"minnow lure",
+"crankbait",
+"jerkbait",
+"bibbed lure",
+"diver",
+"hard plastic lure"
+]
+},
+"Hats & Caps": {
+"accessory": false,
+"aisle": 21,
+"aka": [
+"hat",
+"cap",
+"broad brim",
+"akubra",
+"bucket hat",
+"trucker cap",
+"sunnies hat",
+"headwear"
+]
+},
+"Headlamps": {
+"accessory": false,
+"aisle": 6,
+"aka": [
+"head torch",
+"head light",
+"headtorch",
+"forehead light",
+"miner light",
+"hands free torch"
+]
+},
+"Health & Safety": {
+"accessory": false,
+"aisle": 7,
+"aka": [
+"first aid",
+"first aid kit",
+"safety kit",
+"med kit",
+"bandages",
+"snake bandage",
+"safety gear"
+]
+},
+"Hiking Mats": {
+"accessory": false,
+"aisle": 2,
+"aka": [
+"sleeping mat",
+"roll mat",
+"yoga mat",
+"camp mat",
+"foam mat",
+"self inflating mat",
+"swag mat"
+]
+},
+"Hiking Packs": {
+"accessory": false,
+"aisle": 8,
+"aka": [
+"backpack",
+"rucksack",
+"day pack",
+"daypack",
+"overnight pack",
+"hiking backpack",
+"rucksack pack",
+"walking pack"
+]
+},
+"Hiking Sleeping Bags": {
+"accessory": false,
+"aisle": 2,
+"aka": [
+"sleeping bag",
+"swag bag",
+"down bag",
+"mummy bag",
+"sleeping bag light",
+"trekking bag",
+"warm sleeping bag"
+]
+},
+"Hiking Tents": {
+"accessory": false,
+"aisle": 1,
+"aka": [
+"hiking tent",
+"swag tent",
+"backpacking tent",
+"one man tent",
+"trekking tent",
+"lightweight tent",
+"bivvy",
+"walking tent"
+]
+},
+"Hitches & Shackles": {
+"accessory": true,
+"aisle": 17,
+"aka": [
+"tow hitch",
+"d shackle",
+"bow shackle",
+"tow ball",
+"recovery hitch",
+"hitch receiver",
+"shackle pin"
+]
+},
+"Hooded Fishing Shirts & Fishing Hoodies": {
+"accessory": false,
+"aisle": 21,
+"aka": [
+"fishing shirt",
+"fishing hoodie",
+"hooded shirt",
+"upf shirt",
+"sun shirt",
+"fishing jersey",
+"fishing top"
+]
+},
+"Hook Removers": {
+"accessory": true,
+"aisle": 11,
+"aka": [
+"hook out",
+"hookout",
+"dehooker",
+"hook remover tool",
+"pliers",
+"forceps",
+"hook disgorger"
+]
+},
+"Hot Water Heaters": {
+"accessory": false,
+"aisle": 7,
+"aka": [
+"hot water",
+"camp shower heater",
+"gas hot water",
+"water heater",
+"hot shower",
+"instant hot water",
+"portable hot water"
+]
+},
+"Hydration Packs": {
+"accessory": false,
+"aisle": 8,
+"aka": [
+"camelbak",
+"hydration bladder",
+"water bladder",
+"hydration vest",
+"drink pack",
+"hydration backpack",
+"water pack"
+]
+},
+"Ice Packs, Bricks & Accessories": {
+"accessory": true,
+"aisle": 5,
+"aka": [
+"ice brick",
+"ice pack",
+"freezer brick",
+"cold pack",
+"cooler block",
+"ice block",
+"chiller brick"
+]
+},
+"Inflatable Boats": {
+"accessory": false,
+"aisle": 13,
+"aka": [
+"tinny",
+"rubber ducky",
+"zodiac",
+"blow up boat",
+"dinghy",
+"inflatable dinghy",
+"rubber boat"
+]
+},
+"Inflatable Kayaks": {
+"accessory": false,
+"aisle": 14,
+"aka": [
+"blow up kayak",
+"inflatable canoe",
+"ducky kayak",
+"paddle boat",
+"blow up canoe",
+"packraft"
+]
+},
+"Inflatable Life Jackets & PFDs": {
+"accessory": false,
+"aisle": 13,
+"aka": [
+"life jacket",
+"life vest",
+"pfd",
+"buoyancy vest",
+"flotation vest",
+"lifesaver vest",
+"float vest"
+]
+},
+"Inflatable Pools": {
+"accessory": false,
+"aisle": 15,
+"aka": [
+"blow up pool",
+"paddling pool",
+"kids pool",
+"wading pool",
+"inflatable pool",
+"swimming pool",
+"pool"
+]
+},
+"Insect Protection": {
+"accessory": false,
+"aisle": 7,
+"aka": [
+"mozzie repellent",
+"mozzie spray",
+"insect repellent",
+"bug spray",
+"mozzie net",
+"midgie repellent",
+"aerogard",
+"mosquito coil"
+]
+},
+"Insoles": {
+"accessory": true,
+"aisle": 24,
+"aka": [
+"shoe inserts",
+"foot bed",
+"arch support",
+"inner sole",
+"orthotics",
+"shoe cushioning",
+"foot inserts"
+]
+},
+"Jerry Can Holders": {
+"accessory": true,
+"aisle": 17,
+"aka": [
+"jerry can bracket",
+"jerry can mount",
+"fuel can holder",
+"water can holder",
+"jerry holder",
+"can carrier"
+]
+},
+"Jig Heads": {
+"accessory": true,
+"aisle": 11,
+"aka": [
+"jighead",
+"jig hooks",
+"weighted hooks",
+"jig head hook",
+"soft plastic hooks",
+"jigheads"
+]
+},
+"Jigs": {
+"accessory": false,
+"aisle": 11,
+"aka": [
+"jig lure",
+"micro jig",
+"flutter jig",
+"metal jig",
+"knife jig",
+"slow jig",
+"jigging lure"
+]
+},
+"Jockey Wheels": {
+"accessory": true,
+"aisle": 18,
+"aka": [
+"jockey wheel",
+"trailer jockey wheel",
+"caravan jockey wheel",
+"jockey wheel clamp",
+"trailer wheel",
+"jockey stand"
+]
+},
+"Kayak & SUP Paddles": {
+"accessory": false,
+"aisle": 14,
+"aka": [
+"paddle",
+"kayak paddle",
+"sup paddle",
+"canoe paddle",
+"double paddle",
+"paddle board paddle"
+]
+},
+"Kayak Accessories": {
+"accessory": true,
+"aisle": 14,
+"aka": [
+"kayak seat",
+"kayak trolley",
+"kayak cart",
+"kayak cover",
+"kayak rudder",
+"kayak deck bag",
+"kayak parts"
+]
+},
+"Kayaks": {
+"accessory": false,
+"aisle": 14,
+"aka": [
+"kayak",
+"canoe",
+"sit on top",
+"sit in kayak",
+"fishing kayak",
+"sea kayak",
+"ski kayak"
+]
+},
+"Kick Scooters": {
+"accessory": false,
+"aisle": 19,
+"aka": [
+"scooter",
+"kick scooter",
+"micro scooter",
+"push scooter",
+"adult scooter",
+"foldable scooter"
+]
+},
+"Kids Camping Chairs": {
+"accessory": false,
+"aisle": 3,
+"aka": [
+"kids chair",
+"kids camp chair",
+"child chair",
+"toddler chair",
+"kiddie chair",
+"junior chair",
+"mini chair"
+]
+},
+"Kids Scooters": {
+"accessory": false,
+"aisle": 19,
+"aka": [
+"kids scooter",
+"child scooter",
+"toddler scooter",
+"scooter for kids",
+"junior scooter",
+"kids kick scooter"
+]
+},
+"Kids' & Youth Bike Helmets": {
+"accessory": true,
+"aisle": 19,
+"aka": [
+"kids helmet",
+"bike helmet",
+"child helmet",
+"youth helmet",
+"cycle helmet",
+"helmet kids",
+"head protection"
+]
+},
+"Kids' Bikes": {
+"accessory": false,
+"aisle": 19,
+"aka": [
+"kids bike",
+"child bike",
+"balance bike",
+"toddler bike",
+"junior bike",
+"kids bicycle",
+"first bike"
+]
+},
+"Kids' Clogs": {
+"accessory": false,
+"aisle": 23,
+"aka": [
+"clogs",
+"kids clogs",
+"crocs",
+"garden shoes",
+"slip on shoes",
+"kids slip ons",
+"water shoes"
+]
+},
+"Kids' Clothing Accessories": {
+"accessory": true,
+"aisle": 23,
+"aka": [
+"kids accessories",
+"kids belts",
+"kids hats",
+"kids socks",
+"kids gloves",
+"kids beanies",
+"child accessories"
+]
+},
+"Kids' Combos": {
+"accessory": false,
+"aisle": 10,
+"aka": [
+"kids combo",
+"kids fishing rod reel",
+"kids rod and reel",
+"child combo",
+"junior combo",
+"kids fishing set",
+"kids tackle set"
+]
+},
+"Kids' Floaties": {
+"accessory": true,
+"aisle": 15,
+"aka": [
+"floaties",
+"swimmies",
+"arm bands",
+"water wings",
+"pool floats",
+"flotation devices"
+]
+},
+"Kids' Footwear": {
+"accessory": false,
+"aisle": 23,
+"aka": [
+"shoes",
+"kicks",
+"sneakers",
+"trainers",
+"footwear"
+]
+},
+"Kids' Gumboots": {
+"accessory": false,
+"aisle": 23,
+"aka": [
+"gumboots",
+"wellies",
+"rain boots",
+"rubber boots"
+]
+},
+"Kids' Hats & Caps": {
+"accessory": true,
+"aisle": 23,
+"aka": [
+"hats",
+"caps",
+"beanies",
+"sun hats",
+"bucket hats"
+]
+},
+"Kids' Hiking Boots & Shoes": {
+"accessory": false,
+"aisle": 23,
+"aka": [
+"hiking boots",
+"trail shoes",
+"walking shoes",
+"bushwalking shoes"
+]
+},
+"Kids' Jackets & Coats": {
+"accessory": false,
+"aisle": 23,
+"aka": [
+"jackets",
+"coats",
+"raincoats",
+"windbreakers",
+"puffer jackets"
+]
+},
+"Kids' Kayaks": {
+"accessory": false,
+"aisle": 14,
+"aka": [
+"kayaks",
+"canoes",
+"paddle boats",
+"sit-on-top kayaks"
+]
+},
+"Kids' Pants": {
+"accessory": false,
+"aisle": 23,
+"aka": [
+"pants",
+"trousers",
+"trackpants",
+"shorts"
+]
+},
+"Kids' Running Shoes": {
+"accessory": false,
+"aisle": 23,
+"aka": [
+"runners",
+"sneakers",
+"trainers",
+"joggers",
+"running shoes"
+]
+},
+"Kids' Sandals": {
+"accessory": false,
+"aisle": 23,
+"aka": [
+"sandals",
+"flip flops",
+"slides",
+"thongs"
+]
+},
+"Kids' Shirts & Tops": {
+"accessory": false,
+"aisle": 23,
+"aka": [
+"shirts",
+"tops",
+"t-shirts",
+"jumpers",
+"sweaters"
+]
+},
+"Kids' Shorts": {
+"accessory": false,
+"aisle": 23,
+"aka": [
+"shorts",
+"board shorts",
+"cargo shorts"
+]
+},
+"Kids' Slippers": {
+"accessory": false,
+"aisle": 23,
+"aka": [
+"slippers",
+"ugg boots",
+"house shoes"
+]
+},
+"Kids' Snow Boots": {
+"accessory": false,
+"aisle": 23,
+"aka": [
+"snow boots",
+"winter boots",
+"ski boots"
+]
+},
+"Kids' Snow Gear": {
+"accessory": false,
+"aisle": 23,
+"aka": [
+"snow gear",
+"ski gear",
+"snow clothes",
+"ski clothes"
+]
+},
+"Kids' Socks": {
+"accessory": true,
+"aisle": 23,
+"aka": [
+"socks",
+"ankle socks",
+"crew socks",
+"wool socks"
+]
+},
+"Kids' Sunglasses": {
+"accessory": true,
+"aisle": 23,
+"aka": [
+"sunnies",
+"shades",
+"sunglasses",
+"glasses"
+]
+},
+"Kids' Swimwear & Surfwear": {
+"accessory": false,
+"aisle": 23,
+"aka": [
+"swimmers",
+"bathers",
+"togs",
+"cossies",
+"rashies",
+"boardies",
+"wetsuits"
+]
+},
+"Kids' Thermals": {
+"accessory": false,
+"aisle": 23,
+"aka": [
+"thermals",
+"base layers",
+"thermal underwear",
+"long johns"
+]
+},
+"Kids' Thongs & Slides": {
+"accessory": false,
+"aisle": 23,
+"aka": [
+"thongs",
+"flip flops",
+"slides",
+"pluggers"
+]
+},
+"Kids' Water & Dive Shoes": {
+"accessory": false,
+"aisle": 23,
+"aka": [
+"water shoes",
+"reef shoes",
+"aqua shoes",
+"dive booties"
+]
+},
+"Kinetic Ropes": {
+"accessory": true,
+"aisle": 4,
+"aka": [
+"kinetic rope",
+"snatch strap",
+"tow rope",
+"recovery rope"
+]
+},
+"Knives & Sharpeners": {
+"accessory": false,
+"aisle": 4,
+"aka": [
+"knives",
+"pocket knife",
+"fillet knife",
+"sharpener",
+"knife sharpener"
+]
+},
+"Knives & Tools": {
+"accessory": false,
+"aisle": 4,
+"aka": [
+"knives",
+"multi-tool",
+"pocket knife",
+"leatherman",
+"swiss army knife"
+]
+},
+"Landing Nets & Gaffs": {
+"accessory": true,
+"aisle": 12,
+"aka": [
+"landing net",
+"gaff",
+"fish net",
+"net"
+]
+},
+"Leader Lines": {
+"accessory": true,
+"aisle": 11,
+"aka": [
+"leader",
+"leader line",
+"trace",
+"leader material"
+]
+},
+"Lifestyle Bags": {
+"accessory": false,
+"aisle": 20,
+"aka": [
+"backpack",
+"bag",
+"handbag",
+"tote",
+"shoulder bag"
+]
+},
+"Light Bars": {
+"accessory": true,
+"aisle": 17,
+"aka": [
+"light bar",
+"led light bar",
+"driving lights",
+"spotlights"
+]
+},
+"Lights & Bells": {
+"accessory": true,
+"aisle": 19,
+"aka": [
+"bike light",
+"bike bell",
+"headlight",
+"taillight",
+"bell"
+]
+},
+"Lightweight Hiking Tableware": {
+"accessory": true,
+"aisle": 4,
+"aka": [
+"camp plates",
+"camp cutlery",
+"mess kit",
+"camp bowls",
+"camp cups"
+]
+},
+"Lip Grips & Scales": {
+"accessory": true,
+"aisle": 12,
+"aka": [
+"lip grip",
+"fish grip",
+"fish scale",
+"boga grip",
+"weighing scales"
+]
+},
+"Live Bait Tanks & Aerators": {
+"accessory": true,
+"aisle": 12,
+"aka": [
+"bait tank",
+"live bait tank",
+"aerator",
+"bait bucket",
+"livewell"
+]
+},
+"Locks & Security": {
+"accessory": false,
+"aisle": 18,
+"aka": [
+"locks",
+"padlock",
+"security",
+"cable lock",
+"bike lock"
+]
+},
+"Lure Wraps & Wallets": {
+"accessory": true,
+"aisle": 11,
+"aka": [
+"lure wrap",
+"lure wallet",
+"tackle wallet",
+"lure case"
+]
+},
+"Maps & Atlases": {
+"accessory": false,
+"aisle": 8,
+"aka": [
+"maps",
+"atlas",
+"road map",
+"topographic map",
+"hiking map"
+]
+},
+"Marine Adhesives & Tapes": {
+"accessory": true,
+"aisle": 13,
+"aka": [
+"marine adhesive",
+"marine tape",
+"sika",
+"silicone",
+"sealant"
+]
+},
+"Marine Batteries & Trays": {
+"accessory": true,
+"aisle": 13,
+"aka": [
+"marine battery",
+"boat battery",
+"battery tray",
+"dual battery"
+]
+},
+"Marine Navigation Charts": {
+"accessory": false,
+"aisle": 13,
+"aka": [
+"nav charts",
+"marine charts",
+"boating charts",
+"nautical charts"
+]
+},
+"Marine Navigation Lights": {
+"accessory": true,
+"aisle": 13,
+"aka": [
+"nav lights",
+"navigation lights",
+"boat lights",
+"anchor light"
+]
+},
+"Marine Oil, Lubricants & Grease": {
+"accessory": true,
+"aisle": 13,
+"aka": [
+"marine oil",
+"2 stroke oil",
+"outboard oil",
+"grease",
+"lubricant"
+]
+},
+"Marine Stereos": {
+"accessory": false,
+"aisle": 13,
+"aka": [
+"boat stereo",
+"boat radio",
+"speakers",
+"sound system",
+"marine radio",
+"deck speakers",
+"amp",
+"head unit"
+]
+},
+"Men's Casual & Lifestyle Shoes": {
+"accessory": false,
+"aisle": 24,
+"aka": [
+"sneakers",
+"casual shoes",
+"everyday shoes",
+"runners",
+"walkers",
+"kicks",
+"loafers",
+"slip ons"
+]
+},
+"Men's Clogs": {
+"accessory": false,
+"aisle": 24,
+"aka": [
+"crocs",
+"klompen",
+"slip on shoes",
+"garden shoes",
+"work clogs",
+"nurses shoes"
+]
+},
+"Men's Clothing Accessories": {
+"accessory": true,
+"aisle": 21,
+"aka": [
+"belts",
+"wallets",
+"caps",
+"ties",
+"scarves",
+"beanies",
+"gloves",
+"braces"
+]
+},
+"Men's Gumboots": {
+"accessory": false,
+"aisle": 24,
+"aka": [
+"gummies",
+"wellingtons",
+"wellington boots",
+"wellies",
+"rain boots",
+"mud boots",
+"rubber boots",
+"farm boots"
+]
+},
+"Men's Hats & Caps": {
+"accessory": false,
+"aisle": 21,
+"aka": [
+"akubra",
+"bucket hat",
+"baseball cap",
+"trucker cap",
+"wide brim",
+"sun hat",
+"beanie",
+"hwl"
+]
+},
+"Men's Hiking Boots & Shoes": {
+"accessory": false,
+"aisle": 24,
+"aka": [
+"walking boots",
+"trail shoes",
+"bushwalking boots",
+"hikers",
+"trekking boots",
+"gore tex boots",
+"ramblers",
+"scramblers"
+]
+},
+"Men's Jackets & Outerwear": {
+"accessory": false,
+"aisle": 21,
+"aka": [
+"jacket",
+"rain jacket",
+"puffer",
+"windbreaker",
+"anorak",
+"parka",
+"softshell",
+"shell"
+]
+},
+"Men's Pants": {
+"accessory": false,
+"aisle": 21,
+"aka": [
+"trousers",
+"cargo pants",
+"chinos",
+"jeans",
+"work pants",
+"hiking pants",
+"trackies",
+"boardies"
+]
+},
+"Men's Running Shoes": {
+"accessory": false,
+"aisle": 24,
+"aka": [
+"runners",
+"joggers",
+"trainers",
+"sneakers",
+"running sneakers",
+"sports shoes",
+"athletic shoes",
+"trail runners"
+]
+},
+"Men's Sandals": {
+"accessory": false,
+"aisle": 24,
+"aka": [
+"strappy sandals",
+"walking sandals",
+"sports sandals",
+"slides",
+"flip flops",
+"jandals",
+"sandles"
+]
+},
+"Men's Shirts & Tops": {
+"accessory": false,
+"aisle": 21,
+"aka": [
+"t shirt",
+"tee",
+"polo",
+"button up",
+"flanno",
+"flannel",
+"work shirt",
+"singlet"
+]
+},
+"Men's Shorts": {
+"accessory": false,
+"aisle": 21,
+"aka": [
+"boardies",
+"boardshorts",
+"cargo shorts",
+"walk shorts",
+"swim shorts",
+"stubbies",
+"rugby shorts",
+"chino shorts"
+]
+},
+"Men's Slippers": {
+"accessory": false,
+"aisle": 24,
+"aka": [
+"ugg boots",
+"uggies",
+"house shoes",
+"scuffs",
+"moccasins",
+"bedroom slippers",
+"comfy shoes"
+]
+},
+"Men's Snow Boots": {
+"accessory": false,
+"aisle": 24,
+"aka": [
+"snow boots",
+"winter boots",
+"ski boots",
+"apres boots",
+"insulated boots",
+"waterproof boots",
+"cold weather boots",
+"snow shoes"
+]
+},
+"Men's Snow Gear": {
+"accessory": false,
+"aisle": 21,
+"aka": [
+"snow jacket",
+"ski jacket",
+"snow pants",
+"ski pants",
+"snowboard gear",
+"ski gear",
+"snow clothes",
+"apres"
+]
+},
+"Men's Socks": {
+"accessory": false,
+"aisle": 24,
+"aka": [
+"socks",
+"wool socks",
+"hiking socks",
+"bamboo socks",
+"work socks",
+"ankle socks",
+"crew socks",
+"sock"
+]
+},
+"Men's Sunglasses": {
+"accessory": false,
+"aisle": 21,
+"aka": [
+"sunnies",
+"shades",
+"polarised",
+"polarized",
+"glasses",
+"specs",
+"oakleys"
+]
+},
+"Men's Thermals": {
+"accessory": false,
+"aisle": 21,
+"aka": [
+"thermal top",
+"thermal pants",
+"long johns",
+"base layer",
+"merino thermals",
+"polyprop",
+"ski thermals",
+"thermal undies"
+]
+},
+"Men's Thongs & Slides": {
+"accessory": false,
+"aisle": 24,
+"aka": [
+"thongs",
+"flip flops",
+"slides",
+"double pluggers",
+"pluggers",
+"jandals",
+"sandals",
+"slip slops"
+]
+},
+"Men's Water & Dive Shoes": {
+"accessory": false,
+"aisle": 24,
+"aka": [
+"reef shoes",
+"water shoes",
+"aqua shoes",
+"dive boots",
+"wetsuit boots",
+"neoprene booties",
+"beach shoes",
+"aqua socks"
+]
+},
+"Metal Detectors & Prospecting": {
+"accessory": false,
+"aisle": 7,
+"aka": [
+"metal detector",
+"gold detector",
+"prospecting",
+"gold panning",
+"detector",
+"minelab",
+"gold pan",
+"fossicking"
+]
+},
+"Metal Lures": {
+"accessory": false,
+"aisle": 11,
+"aka": [
+"spinners",
+"spoons",
+"hardbody lures",
+"metal slug",
+"jigs",
+"chrome lures",
+"trolling lures",
+"lure"
+]
+},
+"Mono Line": {
+"accessory": false,
+"aisle": 11,
+"aka": [
+"monofilament",
+"fishing line",
+"mono",
+"leader line",
+"line",
+"spool",
+"fishing string",
+"mono filament"
+]
+},
+"Mooring Ropes & Lines": {
+"accessory": true,
+"aisle": 13,
+"aka": [
+"mooring rope",
+"dock line",
+"boat rope",
+"anchor rope",
+"painter",
+"bow line",
+"stern line",
+"rope"
+]
+},
+"Motor Covers": {
+"accessory": true,
+"aisle": 13,
+"aka": [
+"outboard cover",
+"engine cover",
+"motor cover",
+"boat motor cover",
+"cowling cover",
+"engine cowl",
+"motor blanket"
+]
+},
+"Motor Mounts, Supports & Brackets": {
+"accessory": true,
+"aisle": 13,
+"aka": [
+"motor bracket",
+"outboard bracket",
+"motor mount",
+"engine mount",
+"motor support",
+"transom bracket",
+"motor lift",
+"jack plate"
+]
+},
+"Motors & Fittings": {
+"accessory": false,
+"aisle": 13,
+"aka": [
+"outboard",
+"outboard motor",
+"trolling motor",
+"electric motor",
+"boat motor",
+"engine",
+"yammie",
+"mercury"
+]
+},
+"Mountain Bikes": {
+"accessory": false,
+"aisle": 19,
+"aka": [
+"mtb",
+"mountain bike",
+"hardtail",
+"dually",
+"trail bike",
+"downhill bike",
+"mtb bike",
+"off road bike"
+]
+},
+"Mounting Accessories & Cables": {
+"accessory": true,
+"aisle": 20,
+"aka": [
+"mount",
+"cable",
+"bracket",
+"ram mount",
+"phone mount",
+"gopro mount",
+"adapter",
+"charging cable"
+]
+},
+"Netting & Trap Accessories": {
+"accessory": true,
+"aisle": 12,
+"aka": [
+"bait net",
+"cast net",
+"yabby net",
+"crab pot",
+"trap",
+"net",
+"hoop net",
+"dilly"
+]
+},
+"Outboard Motors": {
+"accessory": false,
+"aisle": 13,
+"aka": [
+"outboard",
+"boat motor",
+"engine",
+"tiller",
+"yammie",
+"mercury",
+"honda",
+"two stroke"
+]
+},
+"Overhead Combos": {
+"accessory": false,
+"aisle": 10,
+"aka": [
+"overhead combo",
+"boat combo",
+"baitcaster combo",
+"conventional combo",
+"combo",
+"rod and reel",
+"overhead setup",
+"game combo"
+]
+},
+"Overhead Reels": {
+"accessory": false,
+"aisle": 10,
+"aka": [
+"overhead reel",
+"baitcaster",
+"conventional reel",
+"game reel",
+"tld",
+"alvey",
+"drum reel",
+"star drag"
+]
+},
+"Overhead Rods": {
+"accessory": false,
+"aisle": 9,
+"aka": [
+"overhead rod",
+"boat rod",
+"game rod",
+"baitcaster rod",
+"conventional rod",
+"bent butt",
+"trolling rod",
+"short rod"
+]
+},
+"Packing Cubes": {
+"accessory": true,
+"aisle": 20,
+"aka": [
+"packing cell",
+"travel cubes",
+"packing organizer",
+"packing cube",
+"travel organizer",
+"compression sack",
+"packing insert",
+"pack cells"
+]
+},
+"Personal Locater Beacons & Satellite Communicators": {
+"accessory": false,
+"aisle": 8,
+"aka": [
+"epirb",
+"plb",
+"beacon",
+"satellite messenger",
+"inreach",
+"spot",
+"garmin inreach",
+"personal locator"
+]
+},
+"Pet Supplies": {
+"accessory": false,
+"aisle": 7,
+"aka": [
+"dog food",
+"dog lead",
+"leash",
+"pet food",
+"dog bed",
+"dog collar",
+"dog bowl",
+"poo bags"
+]
+},
+"Pizza Ovens & Pizza Accessories": {
+"accessory": false,
+"aisle": 4,
+"aka": [
+"pizza oven",
+"camp oven",
+"pizza stone",
+"pizza peel",
+"pizza cutter",
+"portable oven",
+"wood fired oven",
+"pizza tray"
+]
+},
+"Pliers & Cutters": {
+"accessory": false,
+"aisle": 11,
+"aka": [
+"pliers",
+"side cutters",
+"long nose pliers",
+"fishing pliers",
+"wire cutters",
+"braid scissors",
+"cutters",
+"multi tool"
+]
+},
+"Plumbing & Water": {
+"accessory": false,
+"aisle": 18,
+"aka": [
+"water hose",
+"water pump",
+"tap",
+"jerry can",
+"water tank",
+"hose fittings",
+"drinking water",
+"water containers"
+]
+},
+"Pool Toys": {
+"accessory": false,
+"aisle": 15,
+"aka": [
+"pool float",
+"pool noodle",
+"pool ring",
+"li-lo",
+"inflatable pool",
+"pool fun",
+"floaties",
+"lilo"
+]
+},
+"Pop Up Instant Tents": {
+"accessory": false,
+"aisle": 1,
+"aka": [
+"instant tent",
+"pop up tent",
+"quick tent",
+"fast tent",
+"beach tent",
+"one touch tent",
+"pop tent",
+"instant shelter"
+]
+},
+"Popper Lures": {
+"accessory": false,
+"aisle": 11,
+"aka": [
+"popper",
+"surface lure",
+"topwater lure",
+"popping lure",
+"bream popper",
+"surface popper",
+"popper bait",
+"top water"
+]
+},
+"Portable & Bluetooth Speakers": {
+"accessory": false,
+"aisle": 20,
+"aka": [
+"bluetooth speaker",
+"portable speaker",
+"speaker",
+"boombox",
+"party speaker",
+"music speaker",
+"wireless speaker",
+"speaker box"
+]
+},
+"Portable Camping Gazebos & Shades": {
+"accessory": false,
+"aisle": 3,
+"aka": [
+"gazebo",
+"camp shade",
+"shade shelter",
+"canopy",
+"beach gazebo",
+"pop up gazebo",
+"sun shelter",
+"awning"
+]
+},
+"Portable Power Stations & Power Packs": {
+"accessory": false,
+"aisle": 6,
+"aka": [
+"power station",
+"solar generator",
+"battery box",
+"power pack",
+"portable battery",
+"camping battery",
+"12v power",
+"inverter"
+]
+},
+"Portable Solar Panels & Solar Blankets": {
+"accessory": false,
+"aisle": 6,
+"aka": [
+"solar panel",
+"solar blanket",
+"solar mat",
+"foldable solar",
+"solar charger",
+"camping solar",
+"solar sheet",
+"solar power"
+]
+},
+"Portable Washing Machines": {
+"accessory": false,
+"aisle": 7,
+"aka": [
+"camping washing machine",
+"portable washer",
+"mini washing machine",
+"washing machine",
+"camp washer",
+"clothes washer",
+"bucket washer",
+"laundry"
+]
+},
+"Power Banks": {
+"accessory": false,
+"aisle": 20,
+"aka": [
+"power bank",
+"battery bank",
+"phone charger",
+"portable charger",
+"usb charger",
+"charging pack",
+"battery pack",
+"powerpack"
+]
+},
+"Pre-Made Rigs": {
+"accessory": false,
+"aisle": 10,
+"aka": [
+"premade rig",
+"ready rig",
+"rigs",
+"snapper rig",
+"leader rig",
+"ready tied rig",
+"pre tied",
+"bottom rig"
+]
+},
+"Propellers & Covers": {
+"accessory": true,
+"aisle": 13,
+"aka": [
+"prop",
+"propeller",
+"motorguide cover",
+"outboard cover",
+"prop nut",
+"spare prop",
+"motor cover",
+"prop guard"
+]
+},
+"Pumps & Inflation": {
+"accessory": true,
+"aisle": 7,
+"aka": [
+"pump",
+"air pump",
+"electric pump",
+"foot pump",
+"inflation pump",
+"tyre pump",
+"inflator",
+"hand pump"
+]
+},
+"Quick Dry Travel Towels": {
+"accessory": false,
+"aisle": 20,
+"aka": [
+"travel towel",
+"quick dry towel",
+"microfibre towel",
+"camp towel",
+"gym towel",
+"beach towel",
+"sports towel",
+"towel"
+]
+},
+"Rain Jackets & Coats": {
+"accessory": false,
+"aisle": 21,
+"aka": [
+"rain jacket",
+"raincoat",
+"rain coat",
+"wet weather jacket",
+"waterproof jacket",
+"slicker",
+"rainwear",
+"storm jacket"
+]
+},
+"Rash Vests": {
+"accessory": false,
+"aisle": 15,
+"aka": [
+"rashie",
+"rash vest",
+"rash guard",
+"rash shirt",
+"swim shirt",
+"surf top",
+"thermal top",
+"swim top"
+]
+},
+"Rear Wheel Bags & Storage": {
+"accessory": true,
+"aisle": 19,
+"aka": [
+"bike bag",
+"saddle bag",
+"rear rack bag",
+"pannier",
+"cycle bag",
+"bike storage",
+"seat bag",
+"rear bag"
+]
+},
+"Reclining Camp Chairs": {
+"accessory": false,
+"aisle": 3,
+"aka": [
+"camp chair",
+"recliner",
+"lounger",
+"folding chair",
+"beach chair",
+"moon chair",
+"chair",
+"reclining chair"
+]
+},
+"Recovery Accessories": {
+"accessory": true,
+"aisle": 17,
+"aka": [
+"recovery gear",
+"snatch block",
+"winch accessory",
+"d shackle",
+"recovery ring",
+"tree trunk protector",
+"recovery damper",
+"4wd recovery"
+]
+},
+"Recovery Kits & Straps": {
+"accessory": false,
+"aisle": 17,
+"aka": [
+"snatch strap",
+"recovery strap",
+"tow strap",
+"recovery kit",
+"kinetic rope",
+"tow rope",
+"winch extension",
+"snatch kit"
+]
+},
+"Recovery Tracks": {
+"accessory": false,
+"aisle": 17,
+"aka": [
+"traction boards",
+"maxtrax",
+"recovery boards",
+"sand tracks",
+"treds",
+"traction mats",
+"boards",
+"bog mats"
+]
+},
+"Recreational Kayaks": {
+"accessory": false,
+"aisle": 14,
+"aka": [
+"kayak",
+"sit on kayak",
+"sit in kayak",
+"canoe",
+"paddle kayak",
+"fishing kayak",
+"yak",
+"tinny kayak"
+]
+},
+"Reel Oil & Maintenance": {
+"accessory": true,
+"aisle": 10,
+"aka": [
+"reel oil",
+"reel grease",
+"reel service",
+"reel maintenance",
+"reel lube",
+"bearing oil",
+"reel care",
+"reel repair"
+]
+},
+"Rod & Reel Combos": {
+"accessory": false,
+"aisle": 10,
+"aka": [
+"combo",
+"rod reel combo",
+"outfit",
+"rod and reel",
+"ready rod",
+"combo set",
+"rod combo",
+"fishing combo"
+]
+},
+"Rod Accessories": {
+"accessory": true,
+"aisle": 9,
+"aka": [
+"rod holder",
+"rod rack",
+"rod tube",
+"rod tip",
+"rod butt",
+"rod grip",
+"rod rest",
+"rod stand"
+]
+},
+"Rod Storage": {
+"accessory": true,
+"aisle": 9,
+"aka": [
+"rod rack",
+"rod holder",
+"rod tube",
+"rod storage",
+"rod holder rack",
+"rod carrier",
+"fishing rod storage",
+"rod case"
+]
+},
+"Rolling Luggage": {
+"accessory": false,
+"aisle": 20,
+"aka": [
+"suitcase",
+"rolling suitcase",
+"wheeled bag",
+"travel bag",
+"trolley bag",
+"check in bag",
+"luggage",
+"trolley case"
+]
+},
+"Roof Rack Accessories": {
+"accessory": true,
+"aisle": 17,
+"aka": [
+"roof rack accessory",
+"roof rack bar",
+"roof rack mount",
+"roof rack basket",
+"load bars",
+"cross bars",
+"roof bars",
+"rack fittings"
+]
+},
+"Roof Rack Fitting Kits": {
+"accessory": true,
+"aisle": 17,
+"aka": [
+"fitting kit",
+"roof rack kit",
+"roof rack fitting",
+"mount kit",
+"rack legs",
+"foot pack",
+"roof rack adaptor",
+"fitting"
+]
+},
+"Roof Racks & Roof Platforms": {
+"accessory": false,
+"aisle": 17,
+"aka": [
+"roof rack",
+"roof platform",
+"roof cage",
+"roof tray",
+"roof rails",
+"roof basket",
+"platform rack",
+"car roof rack"
+]
+},
+"Roof Top Tents": {
+"accessory": false,
+"aisle": 1,
+"aka": [
+"rooftop tent",
+"roof tent",
+"rtt",
+"car tent",
+"4wd tent",
+"roof top tent",
+"rooftop",
+"camper tent"
+]
+},
+"Rust & Corrosion Inhibitors": {
+"accessory": false,
+"aisle": 17,
+"aka": [
+"rust proofing",
+"rust inhibitor",
+"corrosion spray",
+"anti rust",
+"fish oil spray",
+"lanolin spray",
+"rust guard",
+"corrosion protection"
+]
+},
+"Scooters": {
+"accessory": false,
+"aisle": 19,
+"aka": [
+"scooter",
+"electric scooter",
+"kick scooter",
+"e scooter",
+"push scooter",
+"kids scooter",
+"adult scooter",
+"escooter"
+]
+},
+"Self Inflating 4WD Mats": {
+"accessory": false,
+"aisle": 2,
+"aka": [
+"4wd mat",
+"self inflating mat",
+"camping mat",
+"sleeping mat",
+"swag mat",
+"inflatable mat",
+"self inflater",
+"4x4 mat"
+]
+},
+"Shoe Care & Shoe Accessories": {
+"accessory": true,
+"aisle": 24,
+"aka": [
+"shoe polish",
+"shoe care",
+"laces",
+"insoles",
+"shoe brush",
+"shoe protector",
+"heel grip",
+"shoe spray"
+]
+},
+"Shoe Gaiters": {
+"accessory": true,
+"aisle": 24,
+"aka": [
+"gaiters",
+"gaiter",
+"ankle gaiters",
+"bushwalking gaiters",
+"snake gaiters",
+"leg gaiters",
+"hiking gaiters",
+"snow gaiters"
+]
+},
+"Short Sleeve Shirts & Tops": {
+"accessory": false,
+"aisle": 21,
+"aka": [
+"t shirt",
+"tee",
+"short sleeve shirt",
+"polo",
+"work shirt",
+"fishing shirt",
+"button shirt",
+"top"
+]
+},
+"Sinkers": {
+"accessory": true,
+"aisle": 11,
+"aka": [
+"sinker",
+"sinkers",
+"lead weight",
+"sinker weight",
+"snapper lead",
+"sinker lead",
+"weight",
+"bomb sinker"
+]
+},
+"Skirted Lures": {
+"accessory": false,
+"aisle": 11,
+"aka": [
+"skirted lure",
+"lure",
+"game lure",
+"trolling lure",
+"marlin lure",
+"turbo lure",
+"skirt",
+"bibless lure"
+]
+},
+"Sleeping Bag Liners": {
+"accessory": true,
+"aisle": 2,
+"aka": [
+"bag liner",
+"sleeping bag liner",
+"liner",
+"sleep liner",
+"sleeping liner",
+"cotton liner",
+"silk liner",
+"inner sheet"
+]
+},
+"Sleeping Bags": {
+"accessory": false,
+"aisle": 2,
+"aka": [
+"swag",
+"doona",
+"sleeping bag",
+"bedroll",
+"sleeping quilt"
+]
+},
+"Snorkelling": {
+"accessory": false,
+"aisle": 15,
+"aka": [
+"snorkel",
+"snorkelling gear",
+"diving mask",
+"fins",
+"snorkel set"
+]
+},
+"Socks": {
+"accessory": false,
+"aisle": 24,
+"aka": [
+"sock",
+"ankle socks",
+"hiking socks",
+"work socks"
+]
+},
+"Soft Coolers & Cooler Bags": {
+"accessory": false,
+"aisle": 5,
+"aka": [
+"esky bag",
+"cooler bag",
+"soft esky",
+"ice bag",
+"beers cold"
+]
+},
+"Soft Plastics": {
+"accessory": false,
+"aisle": 11,
+"aka": [
+"soft plastic lures",
+"plastics",
+"soft baits",
+"grubs",
+"paddle tails"
+]
+},
+"Solar Power Accessories": {
+"accessory": true,
+"aisle": 6,
+"aka": [
+"solar panel",
+"solar controller",
+"solar regulator",
+"solar cables",
+"solar mounts"
+]
+},
+"Spear Fishing": {
+"accessory": false,
+"aisle": 15,
+"aka": [
+"spearfishing",
+"spear fishing gear",
+"spearo",
+"spearfish"
+]
+},
+"Spear Guns & Hand Spears": {
+"accessory": false,
+"aisle": 15,
+"aka": [
+"speargun",
+"spear gun",
+"hand spear",
+"spear",
+"polespear"
+]
+},
+"Spearfishing Accessories": {
+"accessory": true,
+"aisle": 15,
+"aka": [
+"speargun parts",
+"spear fishing accessories",
+"spearo accessories",
+"speargun rubbers",
+"speargun line"
+]
+},
+"Spearfishing Snorkels & Masks": {
+"accessory": false,
+"aisle": 15,
+"aka": [
+"spearfishing mask",
+"spearfishing snorkel",
+"dive mask",
+"snorkel",
+"mask"
+]
+},
+"Spearfishing Wetsuits": {
+"accessory": false,
+"aisle": 15,
+"aka": [
+"spearo wetsuit",
+"dive wetsuit",
+"wetsuit",
+"spearfishing suit",
+"open cell wetsuit"
+]
+},
+"Spinnerbaits": {
+"accessory": false,
+"aisle": 11,
+"aka": [
+"spinnerbait",
+"spinner baits",
+"spinner bait"
+]
+},
+"Spinners, Spoons & Flies": {
+"accessory": false,
+"aisle": 11,
+"aka": [
+"spinner",
+"spoon",
+"fly",
+"trout lures",
+"spinners"
+]
+},
+"Spinning Combos": {
+"accessory": false,
+"aisle": 10,
+"aka": [
+"spinning rod and reel",
+"spin combo",
+"spinning outfit",
+"spin rod combo"
+]
+},
+"Spinning Reels": {
+"accessory": false,
+"aisle": 10,
+"aka": [
+"spin reel",
+"eggbeater",
+"threadline reel",
+"spinning reel",
+"spin reels"
+]
+},
+"Spinning Rods": {
+"accessory": false,
+"aisle": 9,
+"aka": [
+"spin rod",
+"spinning rod",
+"spin rods",
+"threadline rod"
+]
+},
+"Squid Jigs": {
+"accessory": false,
+"aisle": 11,
+"aka": [
+"squid jig",
+"squid lures",
+"jigs",
+"squid jigs",
+"eging"
+]
+},
+"Stand Up Paddle Boards (SUPs)": {
+"accessory": false,
+"aisle": 14,
+"aka": [
+"sup",
+"paddle board",
+"stand up paddle board",
+"paddleboard",
+"sups"
+]
+},
+"Sun Protection": {
+"accessory": false,
+"aisle": 7,
+"aka": [
+"sunscreen",
+"sun cream",
+"sunblock",
+"sun hat",
+"rashie",
+"sun shirt"
+]
+},
+"Sunglasses": {
+"accessory": false,
+"aisle": 20,
+"aka": [
+"sunnies",
+"glasses",
+"shades",
+"polarised sunglasses",
+"sun glasses"
+]
+},
+"Surf Combos": {
+"accessory": false,
+"aisle": 10,
+"aka": [
+"surf combo",
+"surf rod and reel",
+"surf outfit",
+"surf fishing combo"
+]
+},
+"Surf Rods": {
+"accessory": false,
+"aisle": 9,
+"aka": [
+"surf rod",
+"beach rod",
+"surf fishing rod",
+"surf rods"
+]
+},
+"Surfboards": {
+"accessory": false,
+"aisle": 16,
+"aka": [
+"surf board",
+"mal",
+"shortboard",
+"longboard",
+"foamie"
+]
+},
+"Swags": {
+"accessory": false,
+"aisle": 1,
+"aka": [
+"swag",
+"swags",
+"dome swag",
+"canvas swag",
+"single swag"
+]
+},
+"Swimbaits & Glidebaits": {
+"accessory": false,
+"aisle": 11,
+"aka": [
+"swimbait",
+"glidebait",
+"glide bait",
+"swim bait"
+]
+},
+"Swimwear & Surfwear": {
+"accessory": false,
+"aisle": 22,
+"aka": [
+"bathers",
+"togs",
+"swimmers",
+"cossie",
+"boardies",
+"rashie",
+"swimwear"
+]
+},
+"Swivels & Snaps": {
+"accessory": false,
+"aisle": 11,
+"aka": [
+"swivel",
+"snap",
+"swivels",
+"snaps",
+"clip"
+]
+},
+"Tackle Bags & Backpacks": {
+"accessory": false,
+"aisle": 11,
+"aka": [
+"tackle bag",
+"fishing backpack",
+"tackle backpack",
+"fishing bag"
+]
+},
+"Tackle Boxes": {
+"accessory": false,
+"aisle": 11,
+"aka": [
+"tackle box",
+"fishing box",
+"fishing tackle box"
+]
+},
+"Tackle Kits": {
+"accessory": false,
+"aisle": 11,
+"aka": [
+"tackle kit",
+"fishing kit",
+"starter kit",
+"tackle pack"
+]
+},
+"Tackle Storage": {
+"accessory": false,
+"aisle": 11,
+"aka": [
+"tackle storage",
+"tackle organiser",
+"fishing storage",
+"tackle bag",
+"tackle box"
+]
+},
+"Tackle Trays": {
+"accessory": false,
+"aisle": 11,
+"aka": [
+"tray",
+"lure tray",
+"tackle tray",
+"box tray",
+"trays"
+]
+},
+"Tarps": {
+"accessory": false,
+"aisle": 7,
+"aka": [
+"tarp",
+"tarpaulin",
+"gazebo",
+"rain tarp",
+"shelter"
+]
+},
+"Telescopic Combos": {
+"accessory": false,
+"aisle": 10,
+"aka": [
+"telescopic combo",
+"travel combo",
+"compact combo",
+"telescopic rod and reel"
+]
+},
+"Tent Accessories": {
+"accessory": true,
+"aisle": 1,
+"aka": [
+"tent pegs",
+"peg",
+"guy rope",
+"tent pole",
+"footprint",
+"repair kit"
+]
+},
+"Terminal Tackle": {
+"accessory": false,
+"aisle": 11,
+"aka": [
+"hooks",
+"sinkers",
+"swivels",
+"leader",
+"terminal tackle"
+]
+},
+"Terminal Tackle Accessories": {
+"accessory": true,
+"aisle": 11,
+"aka": [
+"hook sharpener",
+"tackle accessories",
+"sinker mould",
+"hook remover",
+"terminal tackle parts"
+]
+},
+"Thongs & Slides": {
+"accessory": false,
+"aisle": 24,
+"aka": [
+"thongs",
+"flip flops",
+"slides",
+"sandals",
+"double pluggers"
+]
+},
+"Tie Down Straps & Ropes": {
+"accessory": false,
+"aisle": 7,
+"aka": [
+"tie down straps",
+"rope",
+"ratchet straps",
+"tiedowns",
+"straps"
+]
+},
+"Toilet Chemicals & Accessories": {
+"accessory": false,
+"aisle": 7,
+"aka": [
+"dunny chemicals",
+"toilet chemical",
+"porta potti chemicals",
+"toilet deodoriser",
+"toilet paper"
+]
+},
+"Torches": {
+"accessory": false,
+"aisle": 6,
+"aka": [
+"flashlight",
+"headlamp",
+"spotlight",
+"torch",
+"lantern"
+]
+},
+"Towbar Carriers & Storage": {
+"accessory": true,
+"aisle": 17,
+"aka": [
+"bike rack",
+"towbar rack",
+"cargo box",
+"hitch carrier",
+"rear rack"
+]
+},
+"Towing Accessories": {
+"accessory": true,
+"aisle": 17,
+"aka": [
+"tow ball",
+"tow hitch",
+"rated shackles",
+"safety chain",
+"trailer plug"
+]
+},
+"Towing Hitches & Couplings": {
+"accessory": true,
+"aisle": 17,
+"aka": [
+"tow coupling",
+"hitch",
+"tow ball mount",
+"receiver",
+"coupling"
+]
+},
+"Towing Mirrors": {
+"accessory": true,
+"aisle": 17,
+"aka": [
+"towing mirror",
+"extension mirror",
+"caravan mirrors",
+"clip on mirror",
+"wide mirrors"
+]
+},
+"Trailer Accessories": {
+"accessory": true,
+"aisle": 17,
+"aka": [
+"trailer parts",
+"trailer jockey wheel",
+"trailer bearing",
+"trailer tie down",
+"trailer spring"
+]
+},
+"Trailer Lights & Plugs": {
+"accessory": true,
+"aisle": 17,
+"aka": [
+"trailer plug",
+"trailer wiring",
+"trailer light",
+"led trailer lights",
+"7 pin plug"
+]
+},
+"Trailer Winches": {
+"accessory": true,
+"aisle": 17,
+"aka": [
+"winch",
+"hand winch",
+"boat winch",
+"strap winch",
+"trailer winch"
+]
+},
+"Transducers": {
+"accessory": true,
+"aisle": 13,
+"aka": [
+"fish finder transducer",
+"sonar transducer",
+"depth transducer",
+"transducer mount",
+"sound transducer"
+]
+},
+"Transom Mount Motors": {
+"accessory": false,
+"aisle": 13,
+"aka": [
+"electric motor",
+"trolling motor",
+"outboard",
+"kicker motor",
+"transom motor"
+]
+},
+"Travel & Telescopic Rods": {
+"accessory": false,
+"aisle": 9,
+"aka": [
+"travel rod",
+"telescopic rod",
+"pack rod",
+"folding rod",
+"compact rod"
+]
+},
+"Travel Accessories": {
+"accessory": true,
+"aisle": 20,
+"aka": [
+"travel adapter",
+"packing cubes",
+"travel pillow",
+"luggage scale",
+"neck pillow"
+]
+},
+"Travel Bags & Carry On Bags": {
+"accessory": false,
+"aisle": 20,
+"aka": [
+"carry on",
+"duffel bag",
+"weekender",
+"luggage",
+"overnight bag"
+]
+},
+"Tyre Deflators & Gear": {
+"accessory": true,
+"aisle": 17,
+"aka": [
+"tyre deflator",
+"deflator",
+"air down",
+"tyre gauge",
+"sand deflator"
+]
+},
+"Tyre Repair Kits": {
+"accessory": true,
+"aisle": 17,
+"aka": [
+"puncture kit",
+"tyre plug kit",
+"flat tyre",
+"puncture repair",
+"tyre patch"
+]
+},
+"UHF Radios & Antennas": {
+"accessory": false,
+"aisle": 20,
+"aka": [
+"uhf",
+"cb radio",
+"two way radio",
+"uhf antenna",
+"handheld radio"
+]
+},
+"Urban Bikes": {
+"accessory": false,
+"aisle": 19,
+"aka": [
+"city bike",
+"commuter bike",
+"hybrid bike",
+"town bike",
+"cruiser bike"
+]
+},
+"VHF Marine Radios & Antennas": {
+"accessory": false,
+"aisle": 13,
+"aka": [
+"vhf radio",
+"marine radio",
+"vhf antenna",
+"boat radio",
+"marine antenna"
+]
+},
+"Vibes": {
+"accessory": false,
+"aisle": 11,
+"aka": [
+"vibes",
+"vibe lure",
+"blade lure",
+"hard body lure",
+"vibration lure"
+]
+},
+"Waders, Bibs & Wading Boots": {
+"accessory": false,
+"aisle": 13,
+"aka": [
+"waders",
+"wading boots",
+"chest waders",
+"wader",
+"stocking foot waders"
+]
+},
+"Walking & Hiking Poles": {
+"accessory": false,
+"aisle": 7,
+"aka": [
+"hiking poles",
+"walking stick",
+"trekking poles",
+"walking poles",
+"staff"
+]
+},
+"Wash Down Kits & Hoses": {
+"accessory": true,
+"aisle": 17,
+"aka": [
+"wash down",
+"washdown pump",
+"hose kit",
+"deck wash",
+"wash hose"
+]
+},
+"Wash, Polish & Detailing": {
+"accessory": false,
+"aisle": 17,
+"aka": [
+"car wash",
+"polish",
+"wax",
+"detailing",
+"shampoo"
+]
+},
+"Watches": {
+"accessory": false,
+"aisle": 20,
+"aka": [
+"watch",
+"smartwatch",
+"gps watch",
+"fitness watch",
+"sports watch"
+]
+},
+"Water & Dive Shoes": {
+"accessory": false,
+"aisle": 15,
+"aka": [
+"water shoes",
+"dive booties",
+"reef shoes",
+"aqua shoes",
+"booties"
+]
+},
+"Water Bottles": {
+"accessory": false,
+"aisle": 7,
+"aka": [
+"drink bottle",
+"water bottle",
+"flask",
+"bottle",
+"hydration bladder"
+]
+},
+"Water Purification": {
+"accessory": false,
+"aisle": 7,
+"aka": [
+"water filter",
+"purifier",
+"water purifier",
+"steripen",
+"filter bottle"
+]
+},
+"Water Sports": {
+"accessory": false,
+"aisle": 15,
+"aka": [
+"bodyboard",
+"boogie board",
+"water toy",
+"towable",
+"inflatable"
+]
+},
+"Waterskiing & Ski Tubes": {
+"accessory": false,
+"aisle": 13,
+"aka": [
+"waterski",
+"ski tube",
+"donut",
+"ski rope",
+"wakeboard"
+]
+},
+"Wetsuits": {
+"accessory": false,
+"aisle": 15,
+"aka": [
+"wetsuit",
+"steamer",
+"spring suit",
+"rashie",
+"springsuit"
+]
+},
+"Wire Trace": {
+"accessory": true,
+"aisle": 11,
+"aka": [
+"wire trace",
+"trace wire",
+"leader wire",
+"wire leader",
+"trace"
+]
+},
+"Women's Bikes": {
+"accessory": false,
+"aisle": 19,
+"aka": [
+"ladies bike",
+"womens bike",
+"step through bike",
+"girls bike",
+"cruiser bike"
+]
+},
+"Women's Casual & Lifestyle Shoes": {
+"accessory": false,
+"aisle": 24,
+"aka": [
+"sneakers",
+"casual shoes",
+"lifestyle shoes",
+"slip ons",
+"trainers"
+]
+},
+"Women's Clogs": {
+"accessory": false,
+"aisle": 24,
+"aka": [
+"clogs",
+"crocs",
+"slides",
+"slip on shoes",
+"mules"
+]
+},
+"Women's Clothing Accessories": {
+"accessory": true,
+"aisle": 22,
+"aka": [
+"scarf",
+"belt",
+"hair accessories",
+"jewellery",
+"beanie"
+]
+},
+"Women's Dresses, Rompers & Skirts": {
+"accessory": false,
+"aisle": 22,
+"aka": [
+"dress",
+"romper",
+"skirt",
+"playsuit",
+"jumpsuit"
+]
+},
+"Women's Gumboots": {
+"accessory": false,
+"aisle": 24,
+"aka": [
+"gumboots",
+"rubber boots",
+"wellingtons",
+"gummies",
+"rain boots"
+]
+},
+"Women's Hats & Caps": {
+"accessory": true,
+"aisle": 22,
+"aka": [
+"hat",
+"cap",
+"bucket hat",
+"sun hat",
+"wide brim hat"
+]
+},
+"Women's Hiking Boots & Shoes": {
+"accessory": false,
+"aisle": 24,
+"aka": [
+"hiking boots",
+"trail shoes",
+"walking shoes",
+"hiking shoes",
+"trekking boots"
+]
+},
+"Women's Jackets & Outerwear": {
+"accessory": false,
+"aisle": 22,
+"aka": [
+"jacket",
+"rain jacket",
+"puffer",
+"windbreaker",
+"outerwear"
+]
+},
+"Women's Pants": {
+"accessory": false,
+"aisle": 22,
+"aka": [
+"trousers",
+"jeans",
+"leggings",
+"cargo pants",
+"trackies",
+"slacks"
+]
+},
+"Women's Running Shoes": {
+"accessory": false,
+"aisle": 24,
+"aka": [
+"runners",
+"sneakers",
+"joggers",
+"trainers",
+"sports shoes"
+]
+},
+"Women's Sandals": {
+"accessory": false,
+"aisle": 24,
+"aka": [
+"flats",
+"strappy sandals",
+"slides",
+"jandals"
+]
+},
+"Women's Shorts": {
+"accessory": false,
+"aisle": 22,
+"aka": [
+"shorts",
+"boardies",
+"cargo shorts",
+"hot pants"
+]
+},
+"Women's Slippers": {
+"accessory": false,
+"aisle": 24,
+"aka": [
+"ugg boots",
+"slippers",
+"house shoes",
+"moccasins"
+]
+},
+"Women's Snow Boots": {
+"accessory": false,
+"aisle": 24,
+"aka": [
+"snow boots",
+"apres boots",
+"winter boots",
+"ski boots"
+]
+},
+"Women's Snow Gear": {
+"accessory": false,
+"aisle": 22,
+"aka": [
+"ski gear",
+"snow jacket",
+"ski pants",
+"snowboard gear",
+"powder jacket"
+]
+},
+"Women's Socks": {
+"accessory": false,
+"aisle": 24,
+"aka": [
+"socks",
+"ankle socks",
+"crew socks",
+"wool socks",
+"hiking socks"
+]
+},
+"Women's Sunglasses": {
+"accessory": false,
+"aisle": 20,
+"aka": [
+"sunnies",
+"shades",
+"polarised glasses"
+]
+},
+"Women's Swimwear & Surfwear": {
+"accessory": false,
+"aisle": 15,
+"aka": [
+"bathers",
+"swimmers",
+"togs",
+"cossie",
+"bikini",
+"one piece",
+"rashie",
+"wetsuit"
+]
+},
+"Women's Thermals": {
+"accessory": false,
+"aisle": 22,
+"aka": [
+"thermals",
+"thermal underwear",
+"baselayers",
+"long johns",
+"merino thermals"
+]
+},
+"Women's Thongs & Slides": {
+"accessory": false,
+"aisle": 24,
+"aka": [
+"thongs",
+"flip flops",
+"slides",
+"pluggers",
+"double pluggers"
+]
+},
+"Women's Tops": {
+"accessory": false,
+"aisle": 22,
+"aka": [
+"shirts",
+"t-shirts",
+"tees",
+"blouses",
+"singlets",
+"hoodies",
+"jumpers"
+]
+},
+"Women's Water & Dive Shoes": {
+"accessory": false,
+"aisle": 15,
+"aka": [
+"reef shoes",
+"aqua shoes",
+"water shoes",
+"dive booties",
+"neoprene booties"
+]
+},
+"Work Lights": {
+"accessory": false,
+"aisle": 6,
+"aka": [
+"torch",
+"headlamp",
+"floodlight",
+"spotlight",
+"worklight",
+"lantern"
+]
+}
+}
