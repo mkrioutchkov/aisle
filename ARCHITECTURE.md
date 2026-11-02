@@ -68,7 +68,7 @@ Answers are checked by `node scripts/test_answers.mjs`: over 430 checks against 
 
 ## Known limits
 
-- **Free hosting** pauses after a week without use, and gets slower past roughly 25 questions in the same instant. Fine for one store; a chain needs the paid plan.
+- **Free hosting** pauses after a week without use, and gets slower past roughly 25 questions in the same instant. Its gateway also turned requests away for about a second once, during a burst of 50 at the same moment. The page retries on its own, so a shopper would just wait a second longer. Fine for one store; a chain needs the paid plan.
 - **Voice** uses the speech recognition built into the phone's browser. It varies by device and is worse in a noisy store. Typing always works.
 - **AI wording** can still oversell a product a little. It's limited to the products it's given, and it's told not to claim features the product name doesn't show, but this is a rule, not a guarantee.
 - **The sample report** on `report.html` is generated data, and says so on the page. Its "Just asked" list and speed figure come only from real questions.

@@ -186,13 +186,16 @@
     try {
       const res = await post({ action: "report", password, store: $("#store").value || null, days: +$("#days").value });
       if (res.status === 401) { lock(password ? "That password didn't work." : ""); return; }
-      if (!res.ok) return;
+      if (!res.ok) { $("#gateError").textContent = "The report didn't load just then. Try again in a moment."; return; }
       const text = await res.text();
       if (text !== last) { last = text; draw(JSON.parse(text)); }
       $("#gate").hidden = true;
       $("#report").hidden = false;
       remembered.set(password);
-    } catch { /* keep showing the last report */ } finally {
+    } catch {
+      // Keeps showing the last report. With nothing on screen yet, say why.
+      $("#gateError").textContent = "The report didn't load just then. Try again in a moment.";
+    } finally {
       $("#report").classList.remove("busy");
     }
   }

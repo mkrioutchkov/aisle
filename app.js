@@ -23,14 +23,13 @@
   let ctx = null, aisles = null;
   const chat = [];
   const post = body => fetch(API, { method: "POST", headers: { "content-type": "text/plain" }, body: JSON.stringify(body) });
-  // A hiccup on the way to the server shouldn't cost the shopper an answer, so anything but a clear refusal is tried once more.
-  const RETRY_MS = 400;
-  const pause = () => new Promise(done => setTimeout(done, RETRY_MS));
-  const settled = res => res && (res.ok || res.status < 500);
+  // A hiccup on the way to the server shouldn't cost the shopper an answer, so it's tried once more. The hosting
+  // gateway turns requests away for about a second if a burst arrives together, and says so with a 429.
+  const RETRY_MS = 400, BUSY_RETRY_MS = 1100;
   const postTwice = async body => {
     const res = await post(body).catch(() => null);
-    if (settled(res)) return res;
-    await pause();
+    if (res && (res.ok || (res.status < 500 && res.status !== 429))) return res;
+    await new Promise(done => setTimeout(done, res && res.status === 429 ? BUSY_RETRY_MS : RETRY_MS));
     return post(body);
   };
   const ready = postTwice({ action: "init" }).then(r => r.json()).then(d => {
