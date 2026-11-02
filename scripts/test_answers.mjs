@@ -164,6 +164,25 @@ for (const q of ["thanks", "cheers mate", "tell me a joke", "what's the weather 
   ok(/fishing rod/.test(e.bestHeard(["fishing road", "fishing rod"])) || /fishing road/.test(e.bestHeard(["fishing road", "fishing rod"])), "bestHeard fishing rod");
 }
 
+// The examples printed on the sign and shown on the welcome screen: these get tried first, so they must be right.
+{
+  const on = q => { const r = createAisleEngine(DB).route(q); if (verbose) console.log(`[sign] ${q}\n   ${r.ai ? "(AI first) " + r.fallback.say : r.say}`); return r.ai ? r.fallback : r; };
+  const tops = (r, n = 4) => (r.items || []).slice(0, n).map(i => i.p);
+  const pegs = on("tent pegs"), bags = on("kids sleeping bag"), gas = on("gas canister"), torch = on("head torch"), rod = on("cheapest fishing rod"), loo = on("where are the toilets?"), kit = on("camping weekend for 4");
+  ok(tops(pegs).every(p => /\bpegs?\b/i.test(p.name)), `tent pegs: ${tops(pegs).map(p => p.name)}`);
+  ok(tops(bags).every(p => /\b(kids?|junior|youth)\b/i.test(p.name + " " + p.cat) && /sleeping bag/i.test(p.name)), `kids sleeping bag: ${tops(bags).map(p => p.name)}`);
+  ok(tops(gas).every(p => /\b(butane|propane|gas)\b/i.test(p.name) && /\b(cartridge|canister|cylinder|bottle)s?\b/i.test(p.name)), `gas canister: ${tops(gas).map(p => p.name)}`);
+  ok(!/Aisle (15|20)\b/.test(gas.say), `gas canister scattered: ${gas.say}`);
+  ok(tops(torch).every(p => /\b(headlamps?|head ?torch(es)?)\b/i.test(p.name)), `head torch: ${tops(torch).map(p => p.name)}`);
+  ok(ROD(tops(rod, 1)[0]), `cheapest fishing rod: ${tops(rod, 1)[0]?.name}`);
+  ok(/toilets/i.test(loo.say) && loo.zone === "toilets", `toilets: ${loo.say}`);
+  ok(/starter list for 4/.test(kit.say) && kit.items.length >= 7, `camping weekend for 4: ${kit.say}`);
+  for (const [q, re] of [["what should I bring on a fishing trip", /fishing starter list/], ["first time camping with 2 kids", /camping starter list for 4/], ["tent for a camping weekend", /tent/i]]) {
+    const r = on(q);
+    ok(re.test(r.say), `${q}: ${r.say}`);
+  }
+}
+
 // Things the browser test caught: never "corrected" into a product, and sent to the AI with the right shelf.
 for (const q of ["do you price match", "are you open on sunday", "do you do afterpay", "what's your returns policy", "which is better, a swag or a tent?", "tent or swag", "what's the difference between a swag and a tent"]) {
   const r = createAisleEngine(DB).route(q);

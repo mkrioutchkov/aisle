@@ -46,12 +46,12 @@
     "like in on of at to for from with and or about some there here store shop aisle bay sell selling buy buying kind sort type " +
     "one thing stuff hey hi hello mate um uh ok okay just also this that these those it its be keep kept located location guys yous " +
     "much many cost price stock stocked available left go going trip weekend holiday new good best cheap cheapest budget " +
-    "recommend suggest something item").split(/\s+/));
+    "recommend suggest something item should bring take start starting use using try trying think know see put make").split(/\s+/));
   const SYN = {
     torch: "torch|flashlight", flashlight: "torch", peg: "peg|stake", stake: "peg",
     mattress: "mattress|airbed|mat", mat: "mat|mattress", airbed: "airbed|mattress",
     thong: "thong|slide", slide: "slide|thong", jandal: "thong",
-    gas: "gas|butane|canister|cartridge", butane: "butane|gas", canister: "canister|cartridge", cartridge: "cartridge|canister",
+    gas: "gas|butane|propane", butane: "butane|gas", canister: "canister|cartridge|cylinder|bottle", cartridge: "cartridge|canister", cylinder: "cylinder|bottle|canister",
     bbq: "bbq|barbecue|grill", barbie: "bbq", barbecue: "bbq|barbecue",
     kid: "kid|junior|youth|child|children", child: "kid|junior|youth", children: "kid|junior|youth", junior: "junior|kid|youth",
     pfd: "pfd|buoyancy", bicycle: "bike", paddleboard: "paddleboard|sup",
@@ -213,6 +213,7 @@
   const KIT_RE = /\b(trip|weekend|holiday|getaway|beginners?|starter|first time|what (do|should) (i|we) (need|get|bring|buy|take)|checklist|kit|set ?up|going)\b/;
   const KIT_TOPIC = [["camping", /\bcamp(ing)?\b/], ["fishing", /\bfish(ing)?\b/], ["hiking", /\b(hik(e|ing)|bushwalk(ing)?|trek(king)?)\b/],
     ["beach", /\bbeach\b/], ["kayaking", /\bkayak(ing)?\b/], ["4wd", /\b(4wd|4x4|off ?road(ing)?)\b/]];
+  const KIT_NOISE = /\b(kids?|children|family|wife|husband|partner|mates?|friends?|dad|mum|mom|son|daughter|boys?|girls?|person|beginners?|starter|first|time|setup|set up|checklist|kit|bring|take|\d+|one|two|three|four|five|six)\b/g;
   const ZONE_OF = { toilet: "toilets", "service desk": "service", "click and collect": "service", "fitting room": "fitting", checkout: "checkouts", trolley: "entrance" };
   // Questions about the store rather than its products: the AI can answer or send them to the desk.
   const STORE_RE = /\b(price match(ing)?|match(es)? (a |the )?price|are you open|open (on|till|until|today|tomorrow|late)|opening hours|what time|closing time|trading hours|warranty|policy|policies|afterpay|zip pay|lay ?by|gift cards?|vouchers?|member(ship)?s?|loyalty|discount|on sale|specials|delivery|deliver|parking|manager|jobs?)\b/;
@@ -572,7 +573,7 @@
       if (rel === "cheaper") {
         // "Cheaper" means a step down, not the bargain bin, if there's anything in between.
         const all = pool.filter(p => p.price < L.top.price).sort(SORTS.rating);
-        const near = all.filter(p => p.price >= L.top.price / 2);
+        const near = all.filter(p => p.price >= L.top.price / 2 && p.price <= L.top.price * 0.9);
         const list = near.length ? near : all;
         if (!list.length) return { say: `The ${L.top.name} is already the cheapest ${label} we've got.`, sub: "", items: items([L.top]), marks: [L.top], ok: true };
         return answer(list[0], `The ${list[0].name} is cheaper at ${money(list[0].price)}, ${where(list[0])}.`, list.slice(1));
@@ -650,7 +651,8 @@
       }
       if (general) hits = [...hits.filter(h => h.p.stock > 0), ...hits.filter(h => h.p.stock <= 0)];
       const top = hits[0].p;
-      const phrase = !own || typo ? top.cat.toLowerCase() : plural(own);
+      // "tent for a camping weekend" is said as "You'll find tents in...".
+      const phrase = !own || typo ? top.cat.toLowerCase() : plural(own.split(/\b(?:for|with)\b/)[0].trim() || own);
       // One aisle when most of the top five live there; otherwise list the spread.
       const top5 = hits.slice(0, 5);
       const aisles = top5.filter(h => h.p.aisle === top.aisle).length >= Math.min(3, top5.length)
@@ -697,7 +699,9 @@
     // Returns an answer, or {ai: true, pool, fallback} for the page to send on if it has AI.
     function route(asked, opts = {}) {
       const heard = String(asked).slice(0, 300);
-      const noFix = facility(norm(heard)) || STORE_RE.test(norm(heard)) || parseAsk(heard).ai;
+      // Only short product phrases get corrected. A real question goes to the AI as asked.
+      const noFix = facility(norm(heard)) || STORE_RE.test(norm(heard)) || parseAsk(heard).ai
+        || /\b(should|would|why|how (do|can|to|should)|what (do|should))\b/.test(norm(heard));
       const fix = noFix ? { fixes: [] } : correct(parseAsk(heard).rest, opts.voice);
       if (!fix.fixes.length) return answer(heard);
       let q = heard.toLowerCase();
@@ -733,6 +737,13 @@
       }
       if (a.rel && rest.length && !a.sort) a.sort = REL_SORT[a.rel] || null;
 
+      // "camping weekend for 4" wants a list; "tent for a camping weekend" wants a tent.
+      const topic = KIT_RE.test(qn) ? (KIT_TOPIC.find(([, re]) => re.test(qn)) || []) : [];
+      if (topic[0] && !a.sort && !a.limit && !a.rel) {
+        const other = norm(a.rest).replace(topic[1], " ").replace(KIT_NOISE, " ");
+        if (!words(other).length) return kitAnswer(topic[0], qn);
+      }
+
       if (!a.ai && (a.sort || a.limit || a.persons) && !(a.rel && !rest.length)) {
         // "and the most expensive?" is about what we were just discussing; "the most expensive thing you sell" isn't.
         const followUp = !rest.length && last && !/\b(thing|item|product|store|shop|everything|overall)\b/.test(a.rest);
@@ -742,9 +753,6 @@
           if (r) return r;
         }
       }
-      const topic = KIT_RE.test(qn) ? (KIT_TOPIC.find(([, re]) => re.test(qn)) || [])[0] : null;
-      if (topic && !a.sort) return kitAnswer(topic, qn);
-
       const plainQ = a.limit || a.persons || a.sort || a.rel ? a.rest : q;
       const hits = search(plainQ);
       const fallback = hits.length ? productAnswer(norm(plainQ), hits, plainQ) : { say: NOT_FOUND, sub: "", items: [], marks: [], zone: "service", ok: false };
