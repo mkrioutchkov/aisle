@@ -2,6 +2,7 @@
 //   node scripts/test_answers.mjs            run the checks
 //   node scripts/test_answers.mjs -v         also print every answer
 import { BASE, API, secretKey } from "./sb.mjs";
+import { createEngine } from "../supabase/functions/api/engine.mjs";
 
 const verbose = process.argv.includes("-v");
 const key = await secretKey();
@@ -137,6 +138,14 @@ for (const [q, match, re] of [["biggest tent", TENT, /(\d+)\s*-?\s*v?\s*person/i
   await say("hard cooler");
   const big = await say("got anything bigger?");
   ok(!big.ai && (/cooler|icebox/i.test(big.items?.[0]?.p.name || "") || /already the biggest/.test(big.say)), `cooler then bigger should stay on coolers: ${big.items?.[0]?.p.name || big.say}`);
+  // After an AI answer the AI takes the follow-up, and it's only offered products that really are cheaper.
+  const rec = DB.filter(p => has(ROD, p) && p.stock > 0 && p.price > 100).sort((x, y) => x.price - y.price)[0];
+  const fromAi = { fromAi: true, about: "", cat: rec.cat, label: rec.cat.toLowerCase(), kidsOk: false, persons: null, top: { id: rec.id, price: rec.price, bayes: bayes(rec), size: null, name: rec.name, cat: rec.cat }, shown: [rec.id] };
+  const cheaper = await ask("got anything cheaper?", { ctx: fromAi });
+  ok(cheaper.ai && cheaper.strong && cheaper.pool.length > 0 && cheaper.pool.every(p => p.cat === rec.cat && +p.price < rec.price && p.id !== rec.id), `after AI, cheaper should offer the AI only cheaper ${rec.cat}: ${(cheaper.pool || []).map(p => `${p.name} ${p.price}`).join(", ")}`);
+  const cheapest = DB.filter(p => p.cat === rec.cat && p.stock > 0).sort((x, y) => x.price - y.price)[0];
+  const none = await ask("got anything cheaper?", { ctx: { ...fromAi, top: { ...fromAi.top, id: cheapest.id, price: cheapest.price } } });
+  ok(none.ai && none.strong && !none.pool.some(p => +p.price >= cheapest.price), `after AI, nothing cheaper should offer nothing dearer: ${(none.pool || []).map(p => `${p.name} ${p.price}`).join(", ")}`);
 }
 
 // Plain lookups: answered straight away, the right thing first, never a near-miss word.
@@ -217,6 +226,21 @@ for (const [q, match] of [
   const r = await ask("for person tent", { voice: true }), top = r.items?.[0]?.p;
   ok(top && parseInt((top.name.match(/(\d+)\s*-?\s*v?\s*person/i) || [])[1], 10) >= 4, `"for person tent" should mean 4 person: ${top?.name}`);
 }
+// Sounding like something isn't enough: these are real requests the store can't place, and only the AI can say so.
+for (const q of ["dog boots", "bear spray", "snow chains", "kayak hire", "gas bottle refill", "tent repair service", "rod repair", "bait freezer", "electric bike battery", "going camping in winter what sleeping bag do i need", "do you have size 10 hiking boots", "can i speak to someone"]) {
+  const r = await ask(q, { voice: true });
+  ok(r.ai && !/Showing/.test(r.note || ""), `${q}: should go to the AI as heard: ${r.say || r.note}`);
+}
+// When nothing has every word, the AI still gets the kind of product that was asked about, without a slow planning step.
+for (const [q, want] of [["what size wetsuit do i need", /wetsuit/i], ["is the coleman tent waterproof", /coleman/i], ["what's the best kayak for a beginner", /kayak/i], ["do you have size 10 hiking boots", /boots?/i], ["i need something to stop my feet getting wet", /boots?|socks?/i]]) {
+  const r = await ask(q, { voice: true });
+  ok(r.ai && r.strong && r.pool.some(p => want.test(`${p.name} ${p.cat}`)), `${q}: AI should get ${want}: ${(r.pool || []).slice(0, 4).map(p => p.name)}`);
+}
+// Nothing to search for means no search and no planning step.
+for (const q of ["hi", "who are you", "what can you do"]) {
+  const r = await ask(q);
+  ok(r.ai && r.strong && !r.pool.length, `${q}: shouldn't search for anything: ${(r.pool || []).slice(0, 2).map(p => p.name)}`);
+}
 // Real words stay as they are, and small talk doesn't turn into a product.
 for (const [q, match] of [["road bike", /\b(road|bike)\b/i], ["reel", REEL], ["dog life jacket", /\bdog\b/i], ["boots", BOOT], ["boats", BOAT]]) {
   const r = await ask(q, { voice: true });
@@ -229,6 +253,27 @@ for (const q of ["thanks", "cheers mate", "tell me a joke", "what's the weather 
 {
   const pick = async alts => { const res = await fetch(API, { method: "POST", headers: { "content-type": "text/plain" }, body: JSON.stringify({ q: alts[0], alts, store: "brendale", dry: true }) }); const a = JSON.parse((await res.text()).trim().split("\n").pop()); return a.heard; };
   ok(/tent/.test(await pick(["tint", "tent", "tin"])), "the speech service's other guesses should be used: tint, tent");
+}
+
+// What's on the shelf can't be wrong just because the AI tagged it: only products its answer really talks about count.
+{
+  const engine = createEngine({}, { words: new Map(), wordList: [], aisles: [], stores: [], pairs: new Set(), storeName: s => s }, "brendale");
+  const jacket = { id: 1, name: "Cape Men's Eco Lite Down Jacket", cat: "Jackets", price: 89.99, aisle: 22, bay: 3, stock: 5 };
+  const kayak = { id: 2, name: "Seaflo Adult Kayak", cat: "Kayaks", price: 199, aisle: 14, bay: 10, stock: 5 };
+  const picked = raw => engine.aiAnswer(raw, [jacket, kayak], "q").items.map(i => i.p.id);
+  const same = (raw, want) => ok(JSON.stringify(picked(raw)) === JSON.stringify(want), `AI tags: ${raw} gave ${picked(raw)}, wanted ${want}`);
+  same("I couldn't find snow chains, sorry. Try the service desk. [[1]]", []);
+  same("I can't find snow jackets, sorry. [[1]]", []);
+  same("I couldn't find that, but the Seaflo Adult Kayak is $199, Aisle 14, Bay 10. [[2]]", [2]);
+  same("The Seaflo is a solid buy. [[2]]", [2]);
+  same("Try the Seaflo Adult Kayak at $199, Aisle 14, Bay 10.", [2]);
+  same("Sunscreen helps with that. [[1]]", []);
+  same("Happy to help. [[]]", []);
+  ok(!engine.aiAnswer("I couldn't find it. [[1]]", [jacket], "q").ok, "an answer with no product shown isn't logged as answered");
+}
+for (const q of ["are the prices real", "is the stock real", "are these products real", "is this real"]) {
+  const r = await ask(q);
+  ok(r.route === "fact" && /prices are real/.test(r.say), `${q}: should get the fixed answer: ${r.say || "(AI)"}`);
 }
 
 // The examples printed on the sign and shown on the welcome screen: these get tried first, so they must be right.

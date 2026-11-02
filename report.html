@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#f5f6f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1315" media="(prefers-color-scheme: dark)">
+<title>Question report</title>
+<link rel="preconnect" href="https://pctrghmhkchupwghncap.supabase.co" crossorigin>
+<link rel="stylesheet" href="report.css">
+</head>
+<body>
+<form id="gate" class="gate" autocomplete="off" hidden>
+  <h1>Question report</h1>
+  <p>What shoppers ask in store, and what they couldn't find.</p>
+  <label for="password">Password</label>
+  <input id="password" type="password" autocomplete="current-password" required>
+  <p id="gateError" class="error" role="alert"></p>
+  <button type="submit">Open report</button>
+</form>
+
+<div id="report" class="report" hidden>
+  <header>
+    <h1>What shoppers are asking</h1>
+    <div class="filters">
+      <label>Store
+        <select id="store"><option value="">All stores</option></select>
+      </label>
+      <label>Period
+        <select id="days">
+          <option value="7">Last 7 days</option>
+          <option value="30" selected>Last 30 days</option>
+        </select>
+      </label>
+    </div>
+  </header>
+  <p id="sampleNote" class="note" hidden></p>
+
+  <section id="tiles" class="tiles" aria-label="Summary"></section>
+
+  <section class="panels">
+    <article class="panel">
+      <h2>Couldn't answer</h2>
+      <p class="lede">Asked for in store, with nothing to show them. This is the list for buyers and store managers.</p>
+      <div id="gaps" class="bars"></div>
+    </article>
+    <article class="panel">
+      <h2>Most asked</h2>
+      <p class="lede">The questions staff would otherwise be answering.</p>
+      <div id="top" class="bars"></div>
+    </article>
+    <article class="panel">
+      <h2>Questions per day</h2>
+      <div id="byDay"></div>
+    </article>
+    <article class="panel">
+      <h2>Busiest hours</h2>
+      <div id="byHour"></div>
+    </article>
+    <article class="panel wide">
+      <h2>Just asked</h2>
+      <p class="lede">Real questions from phones, as they come in. Never the sample data.</p>
+      <ol id="live" class="live"></ol>
+    </article>
+  </section>
+  <footer id="foot"></footer>
+</div>
+<div id="tip" class="tip" role="status" hidden></div>
+
+<script src="config.js"></script>
+<script src="report.js"></script>
+</body>
+</html>

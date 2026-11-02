@@ -23,7 +23,17 @@
   let ctx = null, aisles = null;
   const chat = [];
   const post = body => fetch(API, { method: "POST", headers: { "content-type": "text/plain" }, body: JSON.stringify(body) });
-  const ready = post({ action: "init" }).then(r => r.json()).then(d => {
+  // A hiccup on the way to the server shouldn't cost the shopper an answer, so anything but a clear refusal is tried once more.
+  const RETRY_MS = 400;
+  const pause = () => new Promise(done => setTimeout(done, RETRY_MS));
+  const refused = res => res && (res.ok || res.status < 500);
+  const postTwice = async body => {
+    const res = await post(body).catch(() => null);
+    if (refused(res)) return res;
+    await pause();
+    return post(body);
+  };
+  const ready = postTwice({ action: "init" }).then(r => r.json()).then(d => {
     aisles = d.aisles;
     const store = (d.stores || []).find(s => s.slug === slug);
     if (store) showStore(store.name);
@@ -129,7 +139,7 @@
     const el = addTurn(q), box = $(".answer", el), sayEl = $(".say", box), t0 = performance.now();
     let answer = null, firstAt = 0, text = "";
     try {
-      const res = await post({ q, alts, store: slug, voice: via === "voice", ctx, chat, session });
+      const res = await postTwice({ q, alts, store: slug, voice: via === "voice", ctx, chat, session });
       if (!res.ok || !res.body) throw new Error(String(res.status));
       const rd = res.body.getReader(), dec = new TextDecoder();
       let buf = "";
@@ -160,6 +170,8 @@
     } catch (e) {
       console.warn("Couldn't reach the server:", e.message);
     }
+    // Cut off part way through: what's already arrived is still worth keeping.
+    if (!answer && text) answer = { say: text, sub: "", items: [], marks: [], ok: false };
     if (!answer) answer = { say: "I can't reach the store system right now. Check your signal and try again, or ask the team at the service desk.", sub: "", items: [], marks: [], zone: "service", ok: false };
     await ready;
     const total = performance.now() - t0;

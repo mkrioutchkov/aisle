@@ -1,6 +1,7 @@
 // The one server endpoint the phone talks to. Questions arrive as a plain-text POST so the browser skips its
 // CORS preflight, and answers stream back as one JSON object per line. Holds the AI key; the phone never sees it.
 import { createEngine } from "./engine.mjs";
+import { words } from "./text.mjs";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -37,6 +38,8 @@ async function loadInfo() {
   raw.words = new Map(raw.wordList.map((w: any) => [w.v, w]));
   raw.wordList = raw.wordList.filter((w: any) => w.v.length >= 3 && /^[a-z]+$/.test(w.v));
   raw.labels = Object.fromEntries(raw.aisles.map((a: any) => [a.n, a.label]));
+  // Neighbouring words in what the store calls its products, the test for a corrected phrase being a real thing.
+  raw.pairs = new Set(raw.terms.flatMap((t: string) => words(t).map((w: string, i: number, all: string[]) => `${all[i - 1]} ${w}`).slice(1)));
   raw.storeName = (slug: string) => (raw.stores.find((s: any) => s.slug === slug) || { name: slug.replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) }).name;
   infoCache = raw;
   infoAt = Date.now();
@@ -141,16 +144,20 @@ Deno.serve(async req => {
   } catch {
     return json({ error: "bad request" }, 400);
   }
-  if (body.action === "ping") return json({ ok: true });
+  // The server pings itself every minute, so the store layout and word list are ready before a shopper asks.
+  if (body.action === "ping") {
+    await loadInfo();
+    return json({ ok: true });
+  }
   const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "unknown";
-  // A dry run never reaches the AI, so it costs little: tests use it to check answers.
-  if (tooMany(ip, body.dry ? RATE_PER_MINUTE * 20 : RATE_PER_MINUTE)) return json({ error: "too many requests" }, 429);
+  // A dry run never reaches the AI, so it costs little and is counted apart: tests use it to check answers.
+  if (body.dry ? tooMany(`dry ${ip}`, RATE_PER_MINUTE * 20) : tooMany(ip, RATE_PER_MINUTE)) return json({ error: "too many requests" }, 429);
 
   const info = await loadInfo();
   if (body.action === "init") return json({ aisles: info.aisles.map((a: any) => ({ n: a.n, dept: a.dept, label: a.label })), stores: info.stores });
   if (body.action === "report") {
     if (!REPORT_PASSWORD || body.password !== REPORT_PASSWORD) return json({ error: "wrong password" }, 401);
-    return json(await rpc("question_report", { p_store: body.store || null, p_days: body.days || 30 }));
+    return json(await rpc("question_report", { p_store: body.store || null, p_days: Math.max(1, Math.min(90, Math.round(+body.days) || 30)) }));
   }
 
   const store = String(body.store || "brendale").toLowerCase().replace(/[^a-z0-9-]/g, "");
@@ -181,7 +188,7 @@ Deno.serve(async req => {
   // Everything else goes to the AI, streamed so the first words show as soon as they exist.
   const questionForAi = r.q || q;
   if (body.dry) {
-    const s = r.noSearch ? { pool: [], strong: true } : await engine.shelf(questionForAi, r.a, body.ctx || null);
+    const s = r.noSearch ? { pool: [], strong: true } : await engine.shelf(questionForAi, r.a, body.ctx || null, r.guess);
     return json({ type: "answer", route: "ai", dry: true, strong: s.strong, pool: s.pool, note: r.note || "", fallback: r.fallback || null, timing: { server_ms: Math.round(performance.now() - t0) } });
   }
   const encoder = new TextEncoder();
@@ -193,7 +200,7 @@ Deno.serve(async req => {
         const count = await rpc("bump_usage", { p_kind: "ai" });
         if (!AI_KEY || count > AI_DAILY_CAP) throw new Error("AI cap");
         const shelfStart = performance.now();
-        let shelf = r.noSearch ? { pool: [], strong: true } : await engine.shelf(questionForAi, r.a, body.ctx || null);
+        let shelf = r.noSearch ? { pool: [], strong: true } : await engine.shelf(questionForAi, r.a, body.ctx || null, r.guess);
         shelfMs = performance.now() - shelfStart;
         // Not sure which shelf this is about: let the AI decide what to search for first.
         if (!shelf.strong) {
@@ -212,7 +219,8 @@ Deno.serve(async req => {
         if (r.note) answer.sub = r.note;
         const total = performance.now() - t0;
         send({ type: "answer", heard: q, ...answer, timing: { server_ms: Math.round(total), first_ms: Math.round(firstAt), route_ms: Math.round(dbMs), shelf_ms: Math.round(shelfMs), plan_ms: Math.round(planMs) } });
-        log(asked, q, "ai", answer.ok, firstAt, total);
+        // A question about the store has no product to show, but it was still answered.
+        log(asked, q, "ai", answer.ok || !!r.noSearch, firstAt, total);
       } catch (e) {
         console.warn("AI unavailable", String(e));
         const answer: any = r.fallback || await engine.fallback(questionForAi, r.a).catch(() => ({ route: "none", say: "Sorry, I can't reach the store system right now. The team at the service desk can help.", sub: "", items: [], marks: [], ok: false }));

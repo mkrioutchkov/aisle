@@ -215,8 +215,8 @@ export const KIT_TOPIC = [["camping", /\bcamp(ing)?\b/], ["fishing", /\bfish(ing
 export const KIT_NOISE = /\b(kids?|children|family|wife|husband|partner|mates?|friends?|dad|mum|mom|son|daughter|boys?|girls?|person|beginners?|starter|first|time|setup|set up|checklist|kit|bring|take|\d+|one|two|three|four|five|six)\b/g;
 export const ZONE_OF = { toilet: "toilets", "service desk": "service", "click and collect": "service", "fitting room": "fitting", checkout: "checkouts", trolley: "entrance" };
 // Questions about the store rather than its products: the AI can answer or send them to the desk.
-export const STORE_RE = /\b(price match(ing)?|match(es)? (a |the )?price|are you open|open (on|till|until|today|tomorrow|late)|opening hours|what time|closing time|trading hours|warranty|policy|policies|afterpay|zip pay|lay ?by|gift cards?|vouchers?|member(ship)?s?|loyalty|discount|on sale|specials|delivery|deliver|parking|manager|jobs?)\b/;
-export const REAL_RE = /\b(is (this|that|it|the stock) real|real (stock|data)|sample data|fake|demo)\b/;
+export const STORE_RE = /\b(price match(ing)?|match(es)? (a |the )?price|are you open|open (on|till|until|today|tomorrow|late)|opening hours|what time|closing time|trading hours|warranty|policy|policies|afterpay|zip pay|lay ?by|gift cards?|vouchers?|member(ship)?s?|loyalty|discount|on sale|specials|delivery|deliver|parking|manager|jobs?|staff|(speak|talk) to|someone|somebody|a person)\b/;
+export const REAL_RE = /\b(is (this|that|it|the stock) real|(is|are) (the |these |those )?(stock|prices?|products?|locations?|aisles?|bays?)( numbers?)? real|real (stock|data|prices?)|sample data|fake|demo)\b/;
 // Questions asking for judgement rather than a thing: these go to the AI even when every word is a product word.
 export const ADVICE_RE = /\b(which|should|would|why|how (do|can|to|should|does)|what (do|should|can|would|is|are|goes|fits)|whats|good for|suits?|suitable|recommend|suggest|help|want to|need to|going to|trying to|for my|to keep|to stop|that one|this one|those|them|difference|compare|versus|vs|or)\b/;
 // Same, for a ranking: "what's the cheapest rod" is still a ranking, "cheapest rod for my bad back" isn't.
@@ -225,6 +225,7 @@ export const RANK_ADVICE_RE = /\b(which|should|would|why|how (do|can|to|should|d
 export const CONCEPTS = [
   [/\b(beers?|drinks?|cold|ice|chill\w*)\b/, ["cooler"]],
   [/\b(rain\w*|wet|storm\w*|waterproof)\b/, ["rain jacket"]],
+  [/\b(feet|foot|toes?|blisters?)\b/, ["hiking boots", "hiking socks"]],
   [/\b(night|dark)\b/, ["headlamp", "lantern"]],
   [/\b(freez\w*|winter|snow|warm\w*|down|synthetic|insulat\w*)\b/, ["sleeping bag", "thermal", "down jacket"]],
   [/\b(sleep\w*|bed)\b/, ["sleeping bag", "airbed"]],
