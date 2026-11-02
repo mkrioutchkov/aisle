@@ -47,9 +47,24 @@ $$;
 revoke execute on function store_info() from anon, authenticated, public;
 grant execute on function store_info() to service_role;
 
+-- Keeps the sample month up to date: yesterday's sample questions are last week's same weekday. Never touches real ones.
+create or replace function mock_questions_tick()
+returns void
+language sql security definer set search_path = public as $$
+  with yesterday as (select (now() at time zone 'Australia/Brisbane')::date - 1 as d)
+  insert into questions (at, store, session, question, heard, route, answered, first_ms, total_ms, sample)
+  select at + interval '7 days', store, session || '+7', question, heard, route, answered, first_ms, total_ms, true
+  from questions, yesterday
+  where sample and (at at time zone 'Australia/Brisbane')::date = d - 7
+    and not exists (select 1 from questions q where q.sample and (q.at at time zone 'Australia/Brisbane')::date = d);
+$$;
+revoke execute on function mock_questions_tick() from anon, authenticated, public;
+grant execute on function mock_questions_tick() to service_role;
+
 -- Stock changes every five minutes, and a ping every minute keeps the server warm so nobody waits for it to start.
-select cron.unschedule(jobid) from cron.job where jobname in ('aisle-stock', 'aisle-warm');
+select cron.unschedule(jobid) from cron.job where jobname in ('aisle-stock', 'aisle-warm', 'aisle-sample-day');
 select cron.schedule('aisle-stock', '*/5 * * * *', 'select public.mock_stock_tick()');
+select cron.schedule('aisle-sample-day', '10 14 * * *', 'select public.mock_questions_tick()');
 select cron.schedule('aisle-warm', '* * * * *', $job$
   select net.http_post(
     url := 'https://pctrghmhkchupwghncap.supabase.co/functions/v1/api',
