@@ -164,6 +164,34 @@ for (const q of ["thanks", "cheers mate", "tell me a joke", "what's the weather 
   ok(/fishing rod/.test(e.bestHeard(["fishing road", "fishing rod"])) || /fishing road/.test(e.bestHeard(["fishing road", "fishing rod"])), "bestHeard fishing rod");
 }
 
+// Several things at once, by voice, with or without joins, in walking order.
+const HOOK = /\bhooks?\b/i, SUN = /\b(sunscreen|spf|sun)\b/i, STOVE = /\bstoves?\b/i, GASP = /\b(gas|butane|propane)\b/i, LINE = /\b(line|braid|mono)\b/i;
+for (const [q, wants] of [
+  ["i want a fishing hook, attempt, a fishing rod, and sunscreen", [HOOK, TENT, ROD, SUN]],
+  ["i want a fishing hook attempt a fishing rod and sunscreen", [HOOK, TENT, ROD, SUN]],
+  ["i want a fishing hook, a tent, a fishing rod, and sunscreen", [HOOK, TENT, ROD, SUN]],
+  ["I need a tent a sleeping bag and a head torch", [TENT, BAG, HEAD]],
+  ["tent fishing rod sunscreen", [TENT, ROD, SUN]],
+  ["do you have tents and sleeping bags", [TENT, BAG]],
+  ["where are the kayaks and the life jackets", [KAYAK, /\b(pfd|life jacket)/i]],
+  ["a tent, a stove and some gas", [TENT, STOVE, GASP]],
+  ["fishing rod, reel and line", [ROD, REEL, LINE]],
+  ["cheapest tent and the best sleeping bag", [TENT, BAG]],
+  ["um a tint and a fishing road please", [TENT, ROD]],
+]) {
+  const r = createAisleEngine(DB).route(q, { voice: true }), rows = r.items || [];
+  if (verbose) console.log(`[list] ${q}\n   ${r.ai ? "(AI first) " + r.fallback.say : r.say} | ${r.sub || ""}\n   ${rows.map(x => x.p.name.slice(0, 34)).join(" / ")}`);
+  ok(!r.ai && rows.length === wants.length, `[list] ${q}: expected ${wants.length} items, got ${rows.length}: ${r.say || r.fallback?.say}`);
+  for (const want of wants) ok(rows.some(x => (typeof want === "function" ? want(x.p) : want.test(`${x.p.name} ${x.p.cat}`))), `[list] ${q}: missing ${want}: ${rows.map(x => x.p.name)}`);
+  const aisles = rows.map(x => x.p.aisle);
+  ok(aisles.every((n, i) => !i || aisles[i - 1] <= n), `[list] ${q}: not in walking order: ${aisles}`);
+}
+// One thing, even with "and" or "a" in it.
+for (const q of ["rod and reel combo", "tent for a family of 4", "do you have a tent", "where can i find a fishing rod", "a tent", "sleeping bag", "tents", "cheapest tent for a family of 5", "camping table", "which is better a tent or a swag"]) {
+  const r = createAisleEngine(DB).route(q, { voice: true });
+  ok(!(r.walk), `${q}: shouldn't be treated as a list: ${r.say}`);
+}
+
 // The examples printed on the sign and shown on the welcome screen: these get tried first, so they must be right.
 {
   const on = q => { const r = createAisleEngine(DB).route(q); if (verbose) console.log(`[sign] ${q}\n   ${r.ai ? "(AI first) " + r.fallback.say : r.say}`); return r.ai ? r.fallback : r; };

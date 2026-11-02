@@ -73,7 +73,7 @@
       entrance: { x: 150, y: 208, w: 60, h: 14, label: "Entrance", path: "" },
     };
   }
-  function mapSVG(marks = [], zone = null) {
+  function mapSVG(marks = [], zone = null, walk = false) {
     const on = new Set(marks.map(p => p.aisle)), Z = zones(), gap = step() / 2, width = Math.min(10, step() * 0.6);
     let s = `<svg viewBox="0 0 360 230" role="img" aria-label="Store map"><rect class="m-floor" width="360" height="230"/>` +
       `<path class="m-wall" d="M150 216 H8 V8 H352 V216 H210"/>`;
@@ -92,7 +92,11 @@
       s += `<rect class="m-zone${zone === k ? " on" : ""}" x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="5"/>` +
         `<text class="m-zlabel" x="${z.x + z.w / 2}" y="${z.y + z.h / 2 + 2.6}">${z.label}</text>`;
     }
-    if (marks.length === 1) {
+    if (marks.length > 1 && walk) {
+      // A shopping list: along the front of the aisles, up to each stop and back, in aisle order.
+      const stops = [...marks].sort((p, q) => p.aisle - q.aisle || p.bay - q.bay);
+      s += `<path class="m-path" d="M${YOU[0]} ${YOU[1]} V178 ${stops.map(p => `H${ax(p.aisle) + gap} V${bayY(p.bay)} V178`).join(" ")}"/>`;
+    } else if (marks.length === 1) {
       const p = marks[0], x = ax(p.aisle), y = bayY(p.bay);
       s += `<path class="m-path" d="M${YOU[0]} ${YOU[1]} V178 H${x + gap} V${y} H${x + width / 2}"/>`;
     } else if (zone && Z[zone] && Z[zone].path) {
@@ -192,7 +196,7 @@
       }
     }
     box.innerHTML = `<p class="say">${esc(r.say)}</p>${r.sub ? `<p class="sub">${esc(r.sub)}</p>` : ""}${cards(r.items, r.show || 4)}` +
-      (r.marks.length || r.zone ? mapSVG(r.marks, r.zone) : "");
+      (r.marks.length || r.zone ? mapSVG(r.marks, r.zone, r.walk) : "");
     fillImages(box);
     engine.log(q, r);
     const log = saved.get(LOGKEY, []);

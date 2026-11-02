@@ -406,6 +406,15 @@
       const options = tokens.map(x => {
         const w = stem(x), opts = known(x) ? [{ to: x, cost: 0 }] : [];
         if (known(x) && !voice) return opts;
+        // "a tent" heard as one word: "attempt", or "allure" for "a lure".
+        if (!known(x) && /^a[a-z]{3,}/.test(x)) {
+          const rest = x.slice(1).replace(/^(.)\1/, "$1"), s = sound(rest), c = soundClass(s);
+          for (const e of sounds()) {
+            if (c.length >= 2 && catWords.has(e.v) && e.s[0] === s[0] && (e.c === c || c.length >= 3 && lev(e.c, c, 1) <= 1)) {
+              opts.push({ to: e.v, cost: 1.5 + lev(rest, e.v, 6) / 3 });
+            }
+          }
+        }
         // A word run together: "tentpegs".
         if (!known(x) && x.length >= 6) {
           for (let i = 3; i <= x.length - 3; i++) {
@@ -633,7 +642,7 @@
       const aisles = [...new Set(rows.map(r => r.p.aisle))].sort((a, b) => a - b);
       return {
         say: `Here's a ${kit.title} starter list${n ? ` for ${n}` : ""}. It's all in store, across ${aisles.length} aisle${aisles.length > 1 ? "s" : ""}.`,
-        sub: `Aisles ${aisles.join(", ")}.`, items: rows, show: rows.length, marks: rows.map(r => r.p), ok: rows.length > 0,
+        sub: `Aisles ${aisles.join(", ")}.`, items: rows, show: rows.length, marks: rows.map(r => r.p), walk: true, ok: rows.length > 0,
       };
     }
 
@@ -697,8 +706,86 @@
 
     // Plain lookups stay instant and local; advice, follow-ups and anything search can't place go to the AI.
     // Returns an answer, or {ai: true, pool, fallback} for the page to send on if it has AI.
+    // ---------- several things at once ----------
+    const allHeads = () => { const out = new Set(); for (const h of heads.values()) for (const t of h) out.add(t); return out; };
+    const LEAD_IN = /^\s*(?:(?:hi|hey|ok|okay|um|uh|so|well|yeah|right)\s+)*(?:i(?:m| am)? (?:want|need|after|looking for)|i(?:d| would) like|can i (?:get|have)|could i (?:get|have)|do you (?:have|sell|stock)|have you got|where (?:are|is|can i find|do i find)|looking for|show me|find me|get me|got any)\s+/;
+
+    // "a fishing hook, a tent, a fishing rod and sunscreen". Speech usually has no commas, so articles
+    // mark the joins too, except after "for" and the like: "tent for a family" is one thing.
+    function splitItems(q) {
+      const t = q.toLowerCase().replace(/['’]/g, "").replace(LEAD_IN, "");
+      return t.split(/,|;|\band also\b|\band then\b|\bplus\b|\bas well as\b|\balong with\b|\band\b|\bthen\b/)
+        .flatMap(part => part.split(/(?<!\b(?:for|of|with|in|on|to|at|under|over|about))\s+(?=(?:a|an|some)\s)/))
+        .map(s => s.trim().replace(/^(?:a|an|some|the|also|maybe|please)\s+/, "").replace(/\s+(?:please|thanks|too|as well|also)$/, "").trim())
+        .filter(s => words(s).length);
+    }
+
+    // Same again with no joins at all: "tent fishing rod sunscreen". Each piece has to end in a kind of product.
+    function chopItems(q) {
+      const list = q.toLowerCase().replace(/['’]/g, "").replace(LEAD_IN, "").match(/[a-z0-9]+/g) || [];
+      const content = list.filter(x => !STOP.has(x) && !STOP.has(stem(x)));
+      if (content.length < 2 || content.length > 9) return [];
+      const types = allHeads();
+      const best = new Array(content.length + 1).fill(null);
+      best[0] = [];
+      for (let end = 1; end <= content.length; end++) {
+        for (let start = Math.max(0, end - 3); start < end; start++) {
+          if (!best[start]) continue;
+          const piece = content.slice(start, end).join(" "), wordsIn = words(piece), end_ = wordsIn[wordsIn.length - 1];
+          // With three or more words a common product word will do ("sunscreen"); with two, it could be a describing word.
+          const isProduct = end_ && (types.has(end_) || content.length >= 3 && (catWords.has(end_) || (df.get(end_) || 0) >= 20));
+          if (!isProduct || !wordsIn.every(isKnown) || !matchAll(piece).length) continue;
+          if (!best[end] || best[start].length + 1 < best[end].length) best[end] = [...best[start], piece];
+        }
+      }
+      return best[content.length] || [];
+    }
+
+    function listAnswer(q, opts) {
+      const qn = norm(q), a = parseAsk(q);
+      if (a.ai || facility(qn) || STORE_RE.test(qn) || REAL_RE.test(qn) || /\b(which|should|would|why|compare|better)\b/.test(qn)) return null;
+      // "rod and reel combo" is one thing: several products have all of those words.
+      // Unless they clearly said two things: "the kayaks and the life jackets".
+      const lower = q.toLowerCase().replace(/['’]/g, "");
+      if (!/,|\band (?:a|an|the|some)\b/.test(lower) && matchAll(a.rest).length >= 3) return null;
+      const notes = [];
+      // A run-together "a tent" hides a join, so open those up first: "a fishing hook attempt a rod".
+      let text = lower;
+      for (const x of new Set(lower.match(/[a-z]+/g) || [])) {
+        if (/^a[a-z]{3,}/.test(x) && !STOP.has(x) && !words(x).every(isKnown)) {
+          const f = correct(x, opts.voice);
+          if (f.fixes.length) {
+            text = text.replace(new RegExp(`\\b${x}\\b`), `a ${f.fixes[0].to}`);
+            notes.push(`Showing "${f.fixes[0].to}" for "${x}".`);
+          }
+        }
+      }
+      // A piece with only a preference in it isn't an item: "I don't want anything expensive, just a tent".
+      let parts = splitItems(text).filter(p => words(parseAsk(p).rest).length);
+      if (parts.length < 2) parts = chopItems(text);
+      if (parts.length < 2 || parts.length > 8) return null;
+      const rows = [], missing = [];
+      for (const part of parts) {
+        const r = route(part, { ...opts, single: true }), base = r.ai ? r.fallback : r;
+        const p = base.ok && base.items && base.items[0] && base.items[0].p;
+        if (!p || (r.ai && /^Did you mean/.test(base.say))) { missing.push(part); continue; }
+        if (/^Showing /.test(base.sub || "")) notes.push(base.sub.split(/(?<=\.)\s/)[0]);
+        rows.push({ p, label: cap(labelFor(parseAsk(r.asked || part).rest) || part) });
+      }
+      if (rows.length < 2) return null;
+      rows.sort((x, y) => x.p.aisle - y.p.aisle || x.p.bay - y.p.bay);
+      const stops = rows.map(r => `${r.label.toLowerCase()} in Aisle ${r.p.aisle}`);
+      const say = `Here's your list in walking order: ${stops.slice(0, -1).join(", ")} and ${stops[stops.length - 1]}.${missing.length ? ` I couldn't find ${missing.join(" or ")}.` : ""}`;
+      lastPool = rows.map(r => ({ p: r.p }));
+      return { say, sub: notes.join(" "), items: rows, show: rows.length, marks: rows.map(r => r.p), walk: true, ok: true };
+    }
+
     function route(asked, opts = {}) {
       const heard = String(asked).slice(0, 300);
+      if (!opts.single) {
+        const list = listAnswer(heard, opts);
+        if (list) return list;
+      }
       // Only short product phrases get corrected. A real question goes to the AI as asked.
       const noFix = facility(norm(heard)) || STORE_RE.test(norm(heard)) || parseAsk(heard).ai
         || /\b(should|would|why|how (do|can|to|should)|what (do|should))\b/.test(norm(heard));
@@ -711,6 +798,7 @@
       const target = r.ai ? r.fallback : r;
       target.sub = `${note} ${target.sub || ""}`.trim();
       if (r.ai) r.q = q;
+      r.asked = q;
       return r;
     }
 
