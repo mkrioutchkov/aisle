@@ -20,7 +20,8 @@ flowchart LR
 3. **Rankings are computed, never guessed.** "Cheapest" is an SQL sort over every product in stock at that store, not a model's opinion.
 4. **The AI only sees what's on the shelf.** Search picks at most 18 products, with live price, aisle, bay and stock, and the AI recommends from those. It can't quote a product or price the store doesn't have. If search can't tell which shelf a question is about, the AI first says what to search for, then answers from the results.
 5. **Voice mistakes are handled in two steps.** A misheard phrase is corrected directly only when the result is something the store really calls a product ("tint pegs" to "tent pegs"). Anything less certain goes to the AI as heard, so "snow chains" doesn't turn into "snow chinos".
-6. **Every question is logged**, with no personal details, for the store's report: what people ask, what couldn't be answered, and when.
+6. **Product names are also compared letter by letter.** Speech splits and bends names in ways word searches can't see: one phone heard "ECOXGEAR SoundExtreme xES08I Subwoofer" as "X so x gear sound extreme XES 08i subwoofer". So a trigram search over every product name puts the closest ones on the AI's shelf, which reads the question and works out which was meant.
+7. **Every question is logged**, with no personal details, for the store's report: what people ask, what couldn't be answered, and when.
 
 ## Measured
 
@@ -64,7 +65,17 @@ Several shoppers at the same moment, everything except the AI call:
 8 real AI questions at once: first words median 1.85 s, slowest first words 2.44 s, slowest finished 2.96 s, 0 failed.
 <!-- latency:end -->
 
-Answers are checked by `node scripts/test_answers.mjs`: over 440 checks against the deployed server, with the expected results worked out from the raw data independently of the server's logic.
+Answers are checked by `node scripts/test_answers.mjs`: 500 checks against the deployed server, with the expected results worked out from the raw data independently of the server's logic.
+
+Any product can be asked for by name. `node scripts/test_names.mjs` picks random products and asks for each one three ways. Over about 270 products, this is how often the product reached the shopper or the AI's shelf. The mishearing is simulated, copying what speech did on a real phone. Most of the misses are a near variant, like another size of the same thing.
+
+| Asked for by | Before the name search | With it |
+|---|---|---|
+| Whole name | 86% | 99.6% |
+| Whole name, a word or two misheard | 32% | 99% |
+| Most of the name, one word misheard | 48% | 94% |
+
+With 60 more random products and real AI answers, the AI got all 27 whole names and all 29 misheard names right, either showing the product or correctly saying it was sold out. Of 34 asked for by part of the name, it got 25 right and most of the rest offered a near variant. The search adds about 30 to 45 ms before the AI starts, measured by asking each of 45 questions both ways on the live server. The AI figures above were measured before it was added.
 
 ## What's real, what's stand-in, what changes
 
@@ -87,7 +98,7 @@ Answers are checked by `node scripts/test_answers.mjs`: over 440 checks against 
 - **Slow seconds on the shared host.** For a few seconds after each 5-minute mark on the clock, and again about 12 seconds after it, a question can wait 1 to 3 s longer. That's about 3% of the time. Just after other minutes the extra is about 0.5 s. The wait comes before the server's code runs: the code's own time stays around 0.1 to 0.3 s, and moving our own 5-minute job away from those moments changed nothing. It needs measuring again on the paid plan.
 - **Nothing stays warm on the host for long.** It replaces the server's worker about every 75 seconds, however busy it is. So a new worker starts from a copy of the word list and store layout built into the function, the server pings itself every 40 seconds, and the page wakes things up when a shopper touches the screen.
 - **The AI model** occasionally takes several seconds to start: about 1 question in 40 took over 3 s, 4.7 s at worst. The page says what it's doing while it waits, and if the first word takes more than 6 s the server answers without the AI.
-- **Voice** uses the speech recognition built into the phone's browser. It varies by device and accent, and is worse in a noisy store. It has been used on one real iPhone so far, which heard "fishing rod" as "facing road"; that's now corrected. Typing always works.
+- **Voice** uses the speech recognition built into the phone's browser. It varies by device and accent, and is worse in a noisy store. It has been used on one real iPhone so far, which heard "fishing rod" as "facing road" and split up a long product name; both are now handled. Typing always works.
 - **AI wording** can still oversell a product a little. It's limited to the products it's given, and it's told not to claim features the product name doesn't show, but this is a rule, not a guarantee.
 - **The sample report** on `report.html` is generated data, and says so on the page. Its "Just asked" list and speed figure come only from real questions.
 
@@ -104,5 +115,6 @@ Answers are checked by `node scripts/test_answers.mjs`: over 440 checks against 
 | `supabase/migrations/` | Tables, search functions, report, scheduled jobs |
 | `scripts/seed.mjs` | Loads the catalogue, stock and search words |
 | `scripts/test_answers.mjs` | Answer checks |
+| `scripts/test_names.mjs` | Whether random products can be found by name, whole, misheard or in part |
 | `scripts/latency.mjs`, `scripts/soak.mjs` | Latency with questions in quick succession, and spaced out over hours |
 | `print/make_qr.py` | The store sign and a QR label per aisle |

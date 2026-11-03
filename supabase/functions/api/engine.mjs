@@ -8,7 +8,13 @@ import {
 
 const NOT_FOUND = "Hmm, I couldn't find that one. Try other words, or ask the team at the service desk (front right).";
 const CHOP_FILLER = new Set(["a", "an", "some", "the", "and", "um", "uh", "please", "thanks"]);
-const LEAD_IN = /^\s*(?:(?:hi|hey|ok|okay|um|uh|so|well|yeah|right)\s+)*(?:i(?:m| am)? (?:want|need|after|looking for)|i(?:d| would) like|can i (?:get|have)|could i (?:get|have)|do you (?:have|sell|stock)|have you got|where (?:are|is|can i find|do i find)|looking for|show me|find me|get me|got any)\s+/;
+const LEAD_IN = /^\s*(?:(?:hi|hey|gday|mate|ok|okay|alright|um|uh|so|well|yeah|right|actually|anyway|just)\s+)*(?:(?:i(?:m| am)?|we|were|we are) (?:want|need|after|chasing|looking for|shopping for)|i(?:d| would) like|ill (?:have|take|get)|can i (?:get|have|grab)|could i (?:get|have|grab)|do you (?:have|sell|stock)|have you got|where (?:are|is|can i find|do i find)|looking for|show me|find me|get me|give me|gimme|got any|after|chasing)\s+/;
+// How closely a product's name has to read like what was said to be sure it was asked for by name, and to be the name
+// itself; the database returns nothing under 0.4. Whole names with a word misheard score about 0.74, whole names as
+// printed 0.8 to 1, and ordinary questions rarely reach 0.5.
+const NAME_SURE = 0.5, NAME_EXACT = 0.8, NAME_SPREAD = 0.2;
+const RARE_WORD = 10;
+const BUYING_RE = /\b(sell|sells|stock|stocks|stocked|buy|buying|how much|prices?|costs?)\b/;
 
 export function createEngine(db, info, store) {
   const CATALOGUE = info.count || 12000;
@@ -46,6 +52,21 @@ export function createEngine(db, info, store) {
   // The same search again from what the phone remembers about the last answer.
   const findFromCtx = (ctx, opts) => find(ctx.about || "", { kidsOk: ctx.kidsOk, persons: ctx.persons, cat: ctx.cat, ...opts });
 
+  // A product asked for by name, with some of it misheard or run together differently. Word searches can't see
+  // "sound extreme" for SoundExtreme or "triton" for Tritan, but most of the letters still line up. Anything nearly as
+  // close as the best stays too: the same shirt comes in men's, women's and kids'.
+  const namedAs = new Map();
+  function named(q) {
+    const text = String(q).toLowerCase().replace(/['’]/g, "").replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter(w => w && !STOP.has(w)).slice(0, 16).join(" ");
+    if (text.split(" ").length < 2) return Promise.resolve([]);
+    if (!namedAs.has(text)) {
+      namedAs.set(text, db.named({ p_store: store, p_text: text })
+        .then(rows => rows.filter(p => p.sim >= rows[0].sim - NAME_SPREAD))
+        .catch(e => { console.warn("name search failed", String(e)); return []; }));
+    }
+    return namedAs.get(text);
+  }
+
   function labelFor(text) {
     const raw = String(text).toLowerCase().replace(/[^a-z0-9\s-]/g, " ").split(/\s+/).filter(Boolean);
     const isStop = w => STOP.has(w) || STOP.has(stem(w));
@@ -56,7 +77,7 @@ export function createEngine(db, info, store) {
   }
   // "camping chair" reads and sounds better as "You'll find camping chairs in..."; leave brands and "x for y" alone.
   const plural = s => {
-    if (/(s|\d|ing|\baid)$/.test(s) || /\b(for|with|to|of)\b/.test(s)) return s;
+    if (/(s|\d|ing|\baid|paper)$/.test(s) || /\b(for|with|to|of)\b/.test(s)) return s;
     if (/knife$/.test(s)) return `${s.slice(0, -2)}ves`;
     if (/(ch|sh|x)$/.test(s)) return `${s}es`;
     if (/[^aeiou]y$/.test(s)) return `${s.slice(0, -1)}ies`;
@@ -405,6 +426,8 @@ export function createEngine(db, info, store) {
     }
     // A piece with only a preference in it isn't an item: "I don't want anything expensive, just a tent".
     let parts = splitItems(text).filter(p => words(parseAsk(p).rest).length);
+    // Whatever comes before the first "a" is how they started the sentence, unless it's a product: "grabbing a tent".
+    if (parts.length > 1 && !/,|\band\b/.test(text) && !words(parts[0]).every(isKnown)) parts = parts.slice(1);
     // With no joins, two pieces are more likely one thing the AI can make sense of ("rod repair", "bait freezer").
     if (parts.length < 2) {
       parts = await chopItems(text);
@@ -413,7 +436,9 @@ export function createEngine(db, info, store) {
     if (parts.length > 8) return null;
     // "a tent for two people and a dog" is one question about a tent, not a list with a dog on it.
     if (parts.some(p => /\b(dogs?|kids?|wife|husband|partner|mates?|family|son|daughter|baby|child|children|friends?|mum|dad)$/.test(p))) return null;
-    const answers = await Promise.all(parts.map(part => routeOne(part, { ...opts, single: true, ctx: null })));
+    const [answers, byName] = await Promise.all([Promise.all(parts.map(part => routeOne(part, { ...opts, single: true, ctx: null }))), named(q)]);
+    // A name can be full of product words, but "columbia womens pfg bahama long sleeve shirt" is one shirt.
+    if (byName[0]?.sim >= NAME_SURE) return null;
     const rows = [], missing = [];
     answers.forEach((r, i) => {
       const p = r && !r.ai && r.ok && r.items && r.items[0] && r.items[0].p;
@@ -433,7 +458,11 @@ export function createEngine(db, info, store) {
   function facility(qn) {
     const padded = ` ${qn} `;
     for (const f of info.facilities || []) {
-      if (f.keys.some(k => padded.includes(` ${norm(k)} `))) return { ...f, zone: ZONE_OF[f.keys[0]] };
+      const key = f.keys.map(norm).find(k => padded.includes(` ${k} `));
+      if (!key) continue;
+      // "toilets" is a place in the store, but "camping toilet" and "do you sell toilets" are after a product.
+      if (words(key).some(isKnown) && (BUYING_RE.test(qn) || words(padded.replace(` ${key} `, " ")).some(isKnown))) continue;
+      return { ...f, zone: ZONE_OF[f.keys[0]] };
     }
     return null;
   }
@@ -565,7 +594,7 @@ export function createEngine(db, info, store) {
   // that's a confident shelf or the AI should plan its own search first.
   async function shelf(q, a, ctx, guess) {
     const seen = new Set(), pool = [];
-    const add = p => { if (p && pool.length < 18 && !seen.has(p.id)) { seen.add(p.id); pool.push(p); } };
+    const add = (p, room = 18) => { if (p && pool.length < room && !seen.has(p.id)) { seen.add(p.id); pool.push(p); } };
     const kidsOk = KIDS_RE.test(q.toLowerCase()), qn = norm(q), known = words(a.rest).filter(isKnown);
     const sort = a.sort || "relevance";
     const all = known.length && known.length === words(a.rest).length;
@@ -575,28 +604,43 @@ export function createEngine(db, info, store) {
     const together = all && !a.ai;
     if (together) jobs.push(find(a.rest, { kidsOk, persons: a.persons, min: a.min, max: a.max, sort, limit: 10 }));
     for (const s of shelves) jobs.push(find(s, { kidsOk, min: a.min, max: a.max, sort: a.sort || "rating", limit: 5 }));
-    const heads = known.filter(w => (wordInfo.get(w) || {}).head);
+    // A word counts as a kind of product when enough names end in it, which lets in "x" and "t".
+    const heads = known.filter(w => w.length > 2 && (wordInfo.get(w) || {}).head);
     if (!together) for (const w of heads.length ? heads : known) jobs.push(find(w, { kidsOk, min: a.min, max: a.max, sort: a.sort || "rating", limit: heads.length ? 6 : 4 }));
+    // A rare word says the most: "subwoofer for my boat" has to show the one subwoofer, whatever else was said.
+    const rare = known.filter(w => !heads.includes(w) && wordInfo.get(w)?.df <= RARE_WORD).sort((x, y) => wordInfo.get(x).df - wordInfo.get(y).df).slice(0, 2);
+    if (!together && heads.length) for (const w of rare) jobs.push(find(w, { kidsOk, min: a.min, max: a.max, sort: a.sort || "rating", limit: 3 }));
     if ((a.rel || /\b(that one|this one|those|them|it|cheaper|dearer|better)\b/.test(qn)) && ctx && ctx.top) jobs.push(findFromCtx(ctx, { sort: "rating", limit: 8, ...stepFrom(a.rel, ctx) }));
+    // Two words that all match are a kind of thing ("fishing rod"), but three or more may be a product's name, which the
+    // word search can hide behind what it filters out: "seaflo manual bilge pump" is an accessory.
+    const nameSearch = !together || known.length > 2 ? named(q) : null;
     const [found, guessed] = await Promise.all([Promise.all(jobs), guess ? find(guess, { kidsOk, sort: "rating", limit: 5 }) : null]);
-    if (guessed) for (const p of guessed.rows) if (p.stock > 0) add(p);
     const matched = together && found[0] && found[0].rows.length > 0;
-    for (const r of found) for (const p of r.rows) if (p.stock > 0 || matched) add(p);
     // Nothing has every word ("what size wetsuit", "is the coleman tent waterproof"): try the kind of product with
     // each other word, then the kind on its own.
-    if (together && !matched) {
-      const kinds = (heads.length ? heads : known).slice(0, 3), others = known.filter(w => !kinds.includes(w)).slice(0, 3);
-      const opts = { kidsOk, min: a.min, max: a.max, sort: a.sort || "rating" };
-      const partial = await Promise.all([
+    const kinds = (heads.length ? heads : known).slice(0, 3), others = known.filter(w => !kinds.includes(w)).slice(0, 3);
+    const opts = { kidsOk, min: a.min, max: a.max, sort: a.sort || "rating" };
+    const [byName, partial] = await Promise.all([
+      nameSearch || (matched ? [] : named(q)),
+      Promise.all(together && !matched ? [
         ...kinds.flatMap(k => others.map(o => find(`${o} ${k}`, { ...opts, limit: 4 }))),
         ...kinds.map(k => find(k, { ...opts, limit: 6 })),
-      ]);
-      for (const r of partial) for (const p of r.rows) if (p.stock > 0) add(p);
-    }
+        ...rare.filter(w => !kinds.includes(w)).map(w => find(w, { ...opts, limit: 3 })),
+      ] : []),
+    ]);
+    // Asked for by name, it goes first and stays even when sold out: the AI can say so and offer another. When the words
+    // found plenty, only the name itself goes first. A close accessory or kids' product waits behind what they asked for
+    // ("fishing rod" isn't the Fishing Rod Holder), but always keeps a place on the shelf.
+    for (const p of byName) if (p.sim >= NAME_EXACT || (!matched && (p.sim >= NAME_SURE || (!p.acc && (kidsOk || !p.kids))))) add(p);
+    const room = 18 - byName.length;
+    if (guessed) for (const p of guessed.rows) if (p.stock > 0) add(p, room);
+    for (const r of found) for (const p of r.rows) if (p.stock > 0 || matched) add(p, room);
+    for (const r of partial) for (const p of r.rows) if (p.stock > 0) add(p, room);
+    for (const p of byName) add(p);
     if (ctx && ctx.top && !pool.length && !a.rel) { const r = await findFromCtx(ctx, { sort: "rating", limit: 6 }); r.rows.forEach(add); }
     // A product word in the question is enough to go on, and so is a follow-up: "cheaper" with nothing cheaper left
     // is still an answer. Only with neither does the AI plan its own search.
-    return { pool, strong: matched || shelves.length > 0 || (heads.length > 0 && pool.length > 0) || !!(a.rel && ctx && ctx.top) || !!guessed?.rows.length };
+    return { pool, strong: matched || shelves.length > 0 || (heads.length > 0 && pool.length > 0) || !!(a.rel && ctx && ctx.top) || !!guessed?.rows.length || byName[0]?.sim >= NAME_SURE };
   }
 
   // A search the AI asked for: "surf rod", sorted by rating, up to $300.
@@ -671,6 +715,10 @@ ${services}`;
     if (about) {
       const r = await plainAnswer(q, about);
       if (r) return r;
+    }
+    const [top] = await named(q);
+    if (top?.sim >= NAME_SURE) {
+      return { route: "exact", say: `The ${top.name} is ${money(top.price)}, ${where(top)}.`, sub: top.stock > 0 ? `${top.stock} in stock.` : "Sold out here right now.", items: items([top]), marks: [top], ok: true, ctx: ctxFor(top.name, top, top.cat.toLowerCase(), {}, q) };
     }
     return { route: "none", say: NOT_FOUND, sub: "", items: [], marks: [], zone: "service", ok: false };
   }

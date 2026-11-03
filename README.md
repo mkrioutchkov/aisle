@@ -14,6 +14,7 @@ To run the page locally, serve the folder and open `index.html?store=brendale`. 
 | `node scripts/seed.mjs` | Loads the catalogue, stock and search words into the database |
 | `node scripts/seed_questions.mjs` | Fills the report with a month of sample questions, flagged as sample |
 | `node scripts/test_answers.mjs` | Checks answers from the deployed server against the data, independently of the server's logic |
+| `node scripts/test_names.mjs [products]` | Asks for random products by name: whole, misheard and in part. Counts how often the product is found |
 | `node scripts/latency.mjs` | Measures what a shopper waits for with questions in quick succession, which is the best case |
 | `node scripts/soak.mjs [hours] [seconds between questions] [AI on every Nth] [warm]` | Asks questions spaced out, which is the number to expect. With `warm`, asks each one both with and without the page's warm-up |
 | `node scripts/make_snapshot.mjs` | Rebuilds the word list and store layout built into the server function. Run it when the catalogue or layout changes, then deploy |

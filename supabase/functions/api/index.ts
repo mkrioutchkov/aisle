@@ -35,6 +35,7 @@ const inBackground = (job: Promise<unknown>) => {
 const db = {
   find: (args: unknown) => rpc("find_products", args),
   counts: (sets: unknown) => rpc("count_matches", { p_sets: sets }),
+  named: (args: unknown) => rpc("find_named", args),
 };
 
 // The word list and store layout change only with the catalogue. The host replaces a worker about every 75 seconds,

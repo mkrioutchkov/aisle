@@ -242,6 +242,56 @@ for (const q of ["hi", "who are you", "what can you do"]) {
   const r = await ask(q);
   ok(r.ai && r.strong && !r.pool.length, `${q}: shouldn't search for anything: ${(r.pool || []).slice(0, 2).map(p => p.name)}`);
 }
+// Asked for by name, with some of it misheard or run together differently. The first two are what a real phone heard.
+for (const [q, name] of [
+  ["I'd like the X so x gear sound extreme XES 08i subwoofer", /SoundExtreme xES08I Subwoofer/],
+  ["I like the two pack of the Triton white wine glass", /Tritan White Wine Glass 2 Pack/],
+  ["sea to summit frontier long handle cutlery set", /Frontier Long Handle Cutlery Set/],
+  ["shimano dyna flare spin rod", /Dynaflare/],
+  ["columbia back bowl full zip fleece jacket", /Backbowl/],
+  ["min kota remote cradle", /Minn Kota Remote Cradle/],
+  ["jetboil crunch it", /CrunchIt/],
+  ["eco flow river 3 max 600w power station", /EcoFlow River 3 Max/],
+  ["seaflo manual bilge pump", /Seaflo Manual Bilge Pump/],
+  ["garmin gt52hw tm", /^Garmin GT52HW-TM$/],
+]) {
+  const r = await ask(q, { voice: true });
+  const shown = r.pool || (r.items || []).map(x => x.p);
+  ok(shown.some(p => name.test(p.name)), `${q}: shows ${shown.slice(0, 3).map(p => p.name).join(" / ")}`);
+}
+for (const q of ["subwoofer for my boat", "my brother reckons you have got some sort of subwoofer"]) {
+  const r = await ask(q, { voice: true });
+  ok((r.pool || []).some(p => /subwoofer/i.test(p.name)), `${q}: subwoofer should reach the AI`);
+}
+// One product, however many product words are in its name: not a shopping list.
+for (const [q, name] of [
+  ["columbia womens pfg bahama ii long sleeve shirt", /Bahama II/],
+  ["the north face mens box nse pullover hoodie", /Box NSE/i],
+  ["garmin navionics vision marine chart", /Navionics/],
+  ["fuel stand up paddleboard back rest", /Back ?rest/i],
+]) {
+  const r = await ask(q, { voice: true });
+  ok(r.route !== "list" && name.test(r.top?.name || ""), `${q}: ${r.route}, starts with ${r.top?.name}`);
+}
+// "toilets" is a place in the store, and "camping toilet" is a product.
+for (const [q, where] of [["where are the toilets", /Toilets are/], ["i need to use the toilet", /Toilets are/], ["toilets", /Toilets are/], ["where's the nearest toilet", /Toilets are/], ["where are the trolleys", /Trolleys and baskets/], ["shopping trolley", /Trolleys and baskets/], ["basket", /Trolleys and baskets/], ["where do i collect my order", /Click & Collect/], ["can i get a refund", /service desk/]]) {
+  const r = await ask(q);
+  ok(r.route === "fact" && where.test(r.say), `${q}: ${r.route}: ${r.say}`);
+}
+for (const [q, name] of [["camping toilet", /toilet/i], ["portable toilet", /toilet/i], ["do you sell toilets", /toilet/i], ["how much is a toilet", /toilet/i], ["beach trolley", /beach trolley/i], ["do you have a beach trolley", /beach trolley/i], ["grill basket", /grill basket/i], ["laundry basket", /laundry basket/i]]) {
+  const r = await ask(q);
+  ok(r.route === "exact" && name.test(r.top?.name || ""), `${q}: ${r.route}: ${r.say}`);
+}
+// However the sentence starts, none of it is a product: "after" isn't "a filter", "gimme" isn't a game.
+for (const [q, match] of [["i'd like a tent", TENT], ["I'd like some hiking boots", /boot/i], ["i'm after a tent", TENT], ["im chasing a tent", TENT], ["gimme a tent", TENT], ["i'll have a tent", TENT], ["i'll take a tent", TENT], ["after a tent", TENT], ["we're after a fishing rod", ROD], ["alright i want a tent", TENT], ["anyway i need a tent", TENT], ["give me a tent", TENT], ["any chance you have a tent", TENT], ["g'day i'm after a fishing rod", ROD]]) {
+  const r = await ask(q, { voice: true });
+  ok(r.route === "exact" && match.test(r.top?.name || ""), `${q}: ${r.route}: ${r.say || r.top?.name}`);
+}
+// "fishing rod" is after a rod, not a Fishing Rod Holder that reads like it.
+for (const q of ["help me find a fishing rod", "i need to get a fishing rod", "where would i find a fishing rod", "can you help me find a fishing rod"]) {
+  const r = await ask(q, { voice: true });
+  ok(ROD.test(r.top?.name || "") && !/holder/i.test(r.top?.name || ""), `${q}: starts with ${r.top?.name}`);
+}
 // An s for sh only counts when it makes a real product phrase, and never beats the usual correction.
 {
   const r = await ask("beach shed", { voice: true });
@@ -256,7 +306,7 @@ for (const q of ["thanks", "cheers mate", "tell me a joke", "what's the weather 
   const r = await ask(q, { voice: true });
   ok(!/^Showing /.test(r.sub || r.note || ""), `${q}: shouldn't be "corrected": ${r.sub || r.note}`);
 }
-for (const [q, wording] of [["pocket knife", /pocket knives/], ["first aid", /first aid in/]]) {
+for (const [q, wording] of [["pocket knife", /pocket knives/], ["first aid", /first aid in/], ["toilet paper", /toilet paper in/]]) {
   const r = await ask(q);
   ok(wording.test(r.say || ""), `${q}: wording: ${r.say}`);
 }
