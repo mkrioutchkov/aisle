@@ -202,7 +202,10 @@ Deno.serve(async req => {
             return;
           }
           if (!plan.searches.length && Array.isArray(plan.items)) plan.searches = plan.items.map((item: unknown) => ({ q: item }));
-          if (!r.followUp) shelf = { ...shelf, pool: await engine.planned(plan.searches, shelf.pool) };
+          if (!r.followUp) {
+            shelf = { ...shelf, pool: await engine.planned(plan.searches, shelf.pool) };
+            question = engine.followUpQuestion(questionForAi, plan, null);
+          }
           // Not about what they were looking at, or no plan at all: an ordinary search on their own words, because the plan
           // can't know the whole catalogue, with whatever it asked for on top. "do you have a frisbee" gets the frisbees.
           else if (plan.failed >= AI_SERVICES.length || !plan.same) {

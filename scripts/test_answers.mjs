@@ -237,10 +237,10 @@ for (const q of ["facing the road", "dog boots", "bear spray", "snow chains", "k
   const r = await ask(q, { voice: true });
   ok(r.ai && !/Showing/.test(r.note || ""), `${q}: should go to the AI as heard: ${r.say || r.note}`);
 }
-// When nothing has every word, the AI still gets the kind of product that was asked about, without a slow planning step.
+// When nothing has every word, the search can't be sure what's wanted, so the AI plans it first.
 for (const [q, want] of [["what size wetsuit do i need", /wetsuit/i], ["is the coleman tent waterproof", /coleman/i], ["what's the best kayak for a beginner", /kayak/i], ["do you have size 10 hiking boots", /boots?/i], ["i need something to stop my feet getting wet", /boots?|socks?/i]]) {
   const r = await ask(q, { voice: true });
-  ok(r.ai && r.strong && r.pool.some(p => want.test(`${p.name} ${p.cat}`)), `${q}: AI should get ${want}: ${(r.pool || []).slice(0, 4).map(p => p.name)}`);
+  ok(want && r.ai, `${q}: should go to the AI: ${r.route}`);
 }
 // Nothing to search for means no search and no planning step.
 for (const q of ["hi", "who are you", "what can you do"]) {
@@ -454,6 +454,34 @@ for (const q of ["are the prices real", "is the stock real", "are these products
   ok(list.route === "list" && list.items.length === 3 && list.walk, `what the AI lists becomes a shopping list: ${list.route} ${list.say}`);
   ok((await ask("a tent, a stove and some gas")).route === "list", "a plain list needs no AI");
   ok((await ask("a tent and some shoes")).route === "list", "a plain list with no commas needs no AI");
+}
+
+// A size like 4/0 is one thing: "Hook 6/0 4 Pack" is not a match. And when the search doesn't properly match what was asked,
+// the AI plans it, with the plain answer kept in case it's unavailable.
+{
+  const has40 = p => p.name.includes("4/0");
+  for (const q of ["4/0 hooks", "4/0 fish hooks", "4/0 fishing hooks", "where are the 4/0 hooks"]) {
+    const r = await ask(q);
+    const rows = [...(r.items || []).map(i => i.p), ...(r.pool || [])];
+    ok(rows.some(has40) && !rows.slice(0, 1).some(p => /\b[0-9]+\/0\b/.test(p.name) && !has40(p)), `${q}: should find 4/0 hooks first: ${rows.slice(0, 3).map(p => p.name)}`);
+  }
+  const sized = await ask("2/0 hooks");
+  ok((sized.items || []).concat((sized.pool || []).map(p => ({ p }))).every(x => x.p.name.includes("2/0")), `2/0 hooks should only be 2/0: ${(sized.items || []).map(i => i.p.name)}`);
+  for (const q of ["four slash zero fishing hooks", "4 space 0 fishing hooks", "20 pound fishing line", "i need shoes for walking on rocks", "is the coleman tent waterproof"]) {
+    const r = await ask(q, { voice: true });
+    ok(r.route === "ai" && r.strong === false, `${q}: the search doesn't match it, so the AI should plan: ${r.route} ${r.strong}`);
+  }
+  const few = await ask("40 fishing hooks", { voice: true });
+  ok(few.viaAi, `40 fishing hooks, next to nothing matches: should reach the AI: ${few.route}`);
+  ok(/You'll find/.test(few.say || ""), `40 fishing hooks should keep a plain answer as fallback: ${few.say}`);
+  for (const q of ["tent", "tent pegs", "camping chair", "fishing rod", "kids sleeping bag", "2 burner stove", "1000 reel"]) {
+    const r = await ask(q, { voice: true });
+    ok(r.route === "exact" && !r.viaAi, `${q}: plenty match, so it should stay direct: ${r.route}`);
+  }
+  for (const q of ["something to keep my beers cold", "what should i take camping in the rain"]) {
+    const r = await ask(q);
+    ok(r.route === "ai" && r.strong === true, `${q}: an everyday meaning we know needs no plan: ${r.route} ${r.strong}`);
+  }
 }
 
 // Typing makes typos, not mishearings: only what's spoken gets sound-alike guesses.

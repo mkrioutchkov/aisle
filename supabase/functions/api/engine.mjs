@@ -42,6 +42,20 @@ export function createEngine(db, info, store) {
 
   // One search of the catalogue. `about` says what's being looked for; everything else filters or ranks it.
   async function find(about, opts = {}) {
+    // A hook size like 4/0 loses its slash when words are split up, so "Hook 6/0 4 Pack" looks like a match for 4 and 0. The
+    // database ranks the size side by side, and only names with the size itself count.
+    const size = String(about).match(/\b\d+\/\d+\b/)?.[0];
+    if (size) {
+      const rest = String(about).replace(size, " "), limit = opts.limit || 12;
+      const search = text => find(text, { ...opts, phrase: ` ${size.replace("/", " ")} `, limit: 120 });
+      let r = await search(rest), rows = r.rows.filter(p => p.name.includes(size));
+      // Other words can rule it out ("fish hooks"): the kind of product and the size are what matter.
+      if (!rows.length) {
+        const kind = words(rest).filter(isKnown).pop();
+        if (kind) { r = await search(kind); rows = r.rows.filter(p => p.name.includes(size)); }
+      }
+      return { ...r, rows: rows.slice(0, limit), count: rows.length, kind_count: rows.length };
+    }
     const T = termsOf(about);
     const head = opts.noHead ? null : headOf(about);
     return db.find({
@@ -50,7 +64,7 @@ export function createEngine(db, info, store) {
       p_kids_ok: !!opts.kidsOk, p_persons: opts.persons || null, p_min: opts.min ?? null, p_max: opts.max ?? null,
       p_min_bayes: opts.minBayes ?? null, p_size_gt: opts.sizeGt ?? null, p_size_lt: opts.sizeLt ?? null,
       p_exclude: opts.exclude || null, p_cat: opts.cat || null, p_sort: opts.sort || "relevance", p_limit: opts.limit || 12,
-      p_phrase: T.own.length > 1 ? ` ${T.own.join(" ")} ` : null, p_whole: T.own.join(" "),
+      p_phrase: opts.phrase || (T.own.length > 1 ? ` ${T.own.join(" ")} ` : null), p_whole: T.own.join(" "),
     });
   }
   // The same search again from what the phone remembers about the last answer.
@@ -72,7 +86,7 @@ export function createEngine(db, info, store) {
   }
 
   function labelFor(text) {
-    const raw = String(text).toLowerCase().replace(/[^a-z0-9\s-]/g, " ").split(/\s+/).filter(Boolean);
+    const raw = String(text).toLowerCase().replace(/[^a-z0-9\s/-]/g, " ").split(/\s+/).filter(Boolean);
     const isStop = w => STOP.has(w) || STOP.has(stem(w));
     while (raw.length && isStop(raw[0])) raw.shift();
     while (raw.length && isStop(raw[raw.length - 1])) raw.pop();
@@ -593,6 +607,9 @@ export function createEngine(db, info, store) {
       // Words side by side in the top product's name weren't misheard: "jumper leads" aren't "snapper leads".
       const inName = !r.ai && r.items?.[0]?.p && ` ${toks(r.items[0].p.name).join(" ")} `.includes(` ${content.join(" ")} `);
       const few = !r.ai && !inName && r.count !== undefined && r.count < 20;
+      // Next to nothing has these words, and not side by side, so it's probably not what they meant. The AI gets to look,
+      // with this answer ready in case it's unavailable: "40 fishing hooks" is one pack of SF-40s.
+      const settle = () => (!opts.single && few && r.count < 3 && content.length > 1 ? { ai: true, q: heard, a: first, asked: heard, fallback: r } : r);
       // "rod and reel combo" is one thing because several products match all of it; "tents and sleeping bags" isn't.
       if (!opts.single && (r.ai || (few && r.count < 3)) && /\band\b/.test(lower)) {
         const list = await listAnswer(heard, opts);
@@ -604,7 +621,7 @@ export function createEngine(db, info, store) {
           const list = await listAnswer(heard, opts);
           if (list) return list;
         }
-        return r;
+        return settle();
       }
       const fix = await correct(first.rest, opts.voice);
       if (!fix.fixes.length) {
@@ -613,7 +630,7 @@ export function createEngine(db, info, store) {
           if (list) return list;
         }
         if (r.ai) r.guess = fix.guess;
-        return r;
+        return settle();
       }
       return fixedAnswer(heard, fix, opts);
     }
@@ -752,11 +769,14 @@ export function createEngine(db, info, store) {
     // What was actually said, after what it might have meant, in case the correction is wrong.
     if (asSaid) for (const p of asSaid.rows) if (p.stock > 0) add(p);
     if (ctx && ctx.top && !pool.length && !a.rel) { const r = await findFromCtx(ctx, { sort: a.sort || "rating", limit: a.sort ? 12 : 6 }); r.rows.forEach(add); }
-    // A product word in the question is enough to go on, and so is a follow-up: "cheaper" with nothing cheaper left
-    // is still an answer. Only with neither does the AI plan its own search.
     // Several kinds of product named could be a shopping list, a choice or one thing for another. That's for the AI to say.
     if (new Set(known.filter(isKind)).size > 1) return { pool, strong: false };
-    return { pool, strong: matched || shelves.length > 0 || (heads.length > 0 && pool.length > 0) || !!(a.rel && ctx && ctx.top) || !!guessed?.rows.length || byName[0]?.sim >= NAME_SURE };
+    // Sure of itself only when plenty of products have every word, or it's a named product or an everyday meaning we know.
+    // Otherwise the AI plans the search first: "4/0 fish hooks" has hooks on the shelf but none of the size asked for, and
+    // only the AI knows to look for 4/0 hooks. A follow-up is always an answer: "cheaper" with nothing cheaper left.
+    // An everyday meaning only settles it when no kind of product was named: "fishing" says little about which hooks.
+    const plenty = matched && found[0].rows.length >= 3;
+    return { pool, strong: plenty || (shelves.length > 0 && !known.some(isKind)) || !!(a.rel && ctx && ctx.top) || !!guessed?.rows.length || byName[0]?.sim >= NAME_SURE };
   }
 
   // A search the AI asked for: "surf rod", sorted by rating, up to $300.
@@ -828,7 +848,7 @@ ${guide}` },
     }
     const guide = info.aisles.map(a => `${a.label}: ${(a.cats || []).slice(0, 8).join(", ")}`).join("\n");
     return [
-      { role: "system", content: `You turn a shopper's question at an Australian outdoor store into product searches. Reply with JSON only: {"items":[],"searches":[{"q":"2 or 3 plain product words","sort":"rating|price-asc|price-desc","max":null}]}. If they've named several different things they want, not a choice between them or one thing for another, put each in items in plain corrected words and leave searches empty. Speech swallows or mishears small words, so "to" can be "a", and a word said twice may be two separate things. Give 1 to 3 searches for the products that would actually help, using words from the catalogue below. A spoken question may have a misheard word and a typed one a typo, so work out what they meant. If it isn't about products, reply {"searches":[]}.\n\nCATALOGUE\n${guide}` },
+      { role: "system", content: `You turn a shopper's question at an Australian outdoor store into product searches. Reply with JSON only: {"meant":"","items":[],"searches":[{"q":"2 or 3 plain product words","sort":"rating|price-asc|price-desc","max":null}]}. Put what they meant in meant, in plain corrected words. If they've named several different things they want, not a choice between them or one thing for another, put each in items in plain corrected words and leave searches empty. Speech swallows or mishears small words, so "to" can be "a", and a word said twice may be two separate things. Give 1 to 3 searches for the products that would actually help, using words from the catalogue below. Keep any size in the words, written as a shop would: speech can turn the hook size 4/0 into 40, or spell it out. A spoken question may have a misheard word and a typed one a typo, so work out what they meant. If it isn't about products, reply {"searches":[]}.\n\nCATALOGUE\n${guide}` },
       { role: "user", content: `${spoken ? "Spoken" : "Typed"}: ${String(q).slice(0, 300)}` },
     ];
   }
