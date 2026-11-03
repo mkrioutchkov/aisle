@@ -391,6 +391,19 @@ for (const q of ["are the prices real", "is the stock real", "are these products
   ok(!/oven/i.test(`${even.say} ${even.sub} ${even.sentAs}`), `anything even cheaper: ${even.say || even.sentAs}`);
 }
 
+// Typing makes typos, not mishearings: only what's spoken gets sound-alike guesses.
+for (const [q, typed, spoken] of [
+  ["hiking sues", "hiking sues", "hiking {sues:shoes}"], ["reign jacket", "reign jacket", "{reign:rain} jacket"], ["fishing lion", "fishing lion", "fishing {lion:line}"],
+  ["attempt", "attempt", "{attempt:tent}"], ["tnet", "{tnet:tent}", null], ["kyak", "{kyak:kayak}", null], ["fishign rod", "{fishign:fishing} rod", null], ["camping chiar", "camping {chiar:chair}", null],
+]) {
+  const t = await ask(q);
+  ok((t.sentAs || t.q) === typed, `${q} (typed): should reach the AI as ${typed}: ${t.route} ${t.sentAs || t.q}`);
+  if (spoken) {
+    const s = await ask(q, { voice: true });
+    ok((s.sentAs || s.q) === spoken, `${q} (spoken): should reach the AI as ${spoken}: ${s.route} ${s.sentAs || s.q}`);
+  }
+}
+
 // Everyday words the catalogue doesn't use, where the word itself would find something unrelated: "jumper" is a brand
 // of lure and "swimmers" a Daiwa reel. Then the real names those rules must leave alone.
 for (const [q, re] of [

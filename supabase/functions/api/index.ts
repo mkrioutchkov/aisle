@@ -179,14 +179,14 @@ Deno.serve(async req => {
         if (!shelf.strong) {
           send({ type: "status", text: "Looking through the store..." });
           const planStart = performance.now();
-          const plan = await aiPlan(AI_SERVICES, engine.planMessages(questionForAi), { tryMs: PLAN_MS });
+          const plan = await aiPlan(AI_SERVICES, engine.planMessages(questionForAi, !!body.voice), { tryMs: PLAN_MS });
           // DeepSeek has just shown it's in trouble, so don't spend the time left waiting on it again.
           if (plan.failed && AI_SERVICES.length > 1) tries = AI_SERVICES.slice(1);
           shelf = { ...shelf, pool: await engine.planned(plan.searches, shelf.pool) };
           planMs = performance.now() - planStart;
         }
         if (tries.length < 2) tries = [tries[0], tries[0]];
-        const raw = await aiWords(tries, engine.aiMessages(questionForAi, shelf.pool, body.chat, r.order), text => {
+        const raw = await aiWords(tries, engine.aiMessages(questionForAi, shelf.pool, body.chat, r.order, !!body.voice), text => {
           if (!firstAt) firstAt = performance.now() - t0;
           send({ type: "delta", text });
         }, {
