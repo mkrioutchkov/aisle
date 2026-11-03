@@ -44,7 +44,7 @@ export const norm = s => {
 };
 export const toks = s => norm(s).split(" ").filter(Boolean).map(stem);
 
-export const STOP = new Set(("a an the even is are was were where wheres whats what which who how do does did you your yours have has had got get " +
+export const STOP = new Set(("a an the even yeah yep yup nah nope they is are was were where wheres whats what which who how do does did you your yours have has had got get " +
   "any anything i im ive id me my we our us need needs want wanna gonna looking look find finding show tell please can could would will " +
   "like in on of at to for from with and or about some there here store shop aisle bay sell selling buy buying kind sort type " +
   "one thing stuff hey hi hello mate um uh ok okay just also this that these those it its be keep kept located location guys yous " +
@@ -127,7 +127,10 @@ const NOT_UNIT = "(?!\\s*(?:kg|g|l|lt|litres?|liters?|ft|feet|foot|m|cm|mm|in|in
 const amt = (n, k) => parseFloat(n) * (k ? 1000 : 1);
 const RELATIVE = [
   [/\b(cheaper|less expensive|lower price|lower priced|more affordable|less money|save (?:some )?money)\b/, "cheaper"],
+  // A complaint about the price wants something cheaper, not the dearest thing "expensive" would otherwise ask for.
+  [/(?<!\bnot )\b(?:(?:a )?(?:bit|little) )?too (?:expensive|dear|pricey|costly|much)\b|\b(?:a )?(?:bit|little) (?:expensive|dear|pricey|costly|much|steep)\b|\b(?:cant|cannot|can not) afford\b|\bover (?:my |the |our )?budget\b|\bout of (?:my |our )?(?:price )?(?:range|budget)\b|\bcosts? too much\b|\b(?:thats?|its|theyre|they are|these are|those are|this is) (?:pretty |quite |really |very |so )?(?:expensive|dear|pricey|costly|steep)\b/, "cheaper"],
   [/\b(more expensive|dearer|pricier|higher end|step up|fancier|nicer)\b/, "dearer"],
+  [/\btoo (?:cheap|basic)\b/, "dearer"],
   [/\b(better quality|higher quality|better rated|higher rated|better)\b/, "better"],
   [/\b(bigger|larger)\b/, "bigger"],
   [/\b(smaller|more compact)\b/, "smaller"],

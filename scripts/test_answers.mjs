@@ -391,6 +391,27 @@ for (const q of ["are the prices real", "is the stock real", "are these products
   ok(!/oven/i.test(`${even.say} ${even.sub} ${even.sentAs}`), `anything even cheaper: ${even.say || even.sentAs}`);
 }
 
+// A complaint about the price wants something cheaper than what was just shown, never the dearest.
+{
+  const shoes = await ask("shoes"), top = shoes.items[0].p;
+  for (const q of ["are these are too expensive", "these are too expensive", "too expensive", "too dear", "thats a bit pricey", "that is a bit much", "i cant afford that", "out of my budget", "that costs too much"]) {
+    const r = await ask(q, { voice: true, ctx: shoes.ctx });
+    ok(r.viaAi && /^cheaper than /.test(r.order || ""), `${q}: should ask for cheaper: ${r.route} ${r.order}`);
+    ok((r.pool || []).length && r.pool.every(p => +p.price < +top.price), `${q}: everything listed should be under ${top.price}: ${(r.pool || []).map(p => p.price)}`);
+  }
+  // Following up with no product named stays on the same product, however it starts.
+  const footwear = /shoe|boot|sock|slide|thong|sandal|footwear|crocs|gumboot/i;
+  for (const q of ["yeah the cheapest", "yeah just what's the cheapest ones", "which ones are cheapest", "which is the cheapest", "the cheapest ones"]) {
+    const r = await ask(q, { voice: true, ctx: shoes.ctx });
+    ok(r.order === "cheapest first", `${q}: should be in price order: ${r.route} ${r.order}`);
+    ok((r.pool || []).length && r.pool.slice(0, 4).every(p => footwear.test(`${p.name} ${p.cat}`)), `${q}: should stay on shoes: ${(r.pool || []).slice(0, 4).map(p => p.name)}`);
+  }
+  for (const q of ["most expensive tent", "expensive tent"]) {
+    const r = await ask(q);
+    ok(r.order === "dearest first", `${q}: should still mean the dearest: ${r.order}`);
+  }
+}
+
 // Typing makes typos, not mishearings: only what's spoken gets sound-alike guesses.
 for (const [q, typed, spoken] of [
   ["hiking sues", "hiking sues", "hiking {sues:shoes}"], ["reign jacket", "reign jacket", "{reign:rain} jacket"], ["fishing lion", "fishing lion", "fishing {lion:line}"],

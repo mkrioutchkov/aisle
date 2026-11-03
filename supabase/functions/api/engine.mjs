@@ -14,6 +14,7 @@ const LEAD_IN = /^\s*(?:(?:hi|hey|gday|mate|ok|okay|alright|um|uh|so|well|yeah|r
 // printed 0.8 to 1, and ordinary questions rarely reach 0.5.
 const NAME_SURE = 0.5, NAME_EXACT = 0.8, NAME_SPREAD = 0.2;
 const RARE_WORD = 10;
+const STEP = { cheaper: "cheaper than", dearer: "dearer than", better: "rated higher than", bigger: "bigger than", smaller: "smaller than" };
 const ORDER = { "price-asc": "cheapest first", "price-desc": "dearest first", rating: "highest rated first", popular: "most reviewed first" };
 const BUYING_RE = /\b(sell|sells|stock|stocks|stocked|buy|buying|how much|prices?|costs?)\b/;
 
@@ -586,10 +587,12 @@ export function createEngine(db, info, store) {
     // Follow-ups: "got anything cheaper?", "something else".
     if (a.rel && !rest.length && ctx && ctx.top) {
       // After an AI answer the subject is what it recommended, not a search, so "cheaper" needs its judgement too.
-      if (ctx.fromAi) return { ai: true, q, a };
+      // The answer it follows may only have said where they are, so the AI needs telling what "these" means.
+      const order = STEP[a.rel] && ctx.top.name ? `${STEP[a.rel]} the ${ctx.top.name} at ${money(ctx.top.price)}` : "";
+      if (ctx.fromAi) return { ai: true, q, a, order };
       const r = await relative(a.rel, ctx);
       // "anything cheaper" after tent pegs shouldn't offer floor mats just because they're tent accessories too.
-      if (r) return opts.single ? r : { ai: true, q, a, fallback: r };
+      if (r) return opts.single ? r : { ai: true, q, a, order, fallback: r };
     }
     if (a.rel && rest.length && !a.sort) a.sort = REL_SORT[a.rel] || null;
 
@@ -618,7 +621,7 @@ export function createEngine(db, info, store) {
       if (r) return r;
     }
     // "hi", "who are you": no product in it, so nothing to look up first.
-    return { ai: true, q, a, noSearch: !rest.length && !a.rel && !a.sort && !a.limit && !(ctx && ctx.top) };
+    return { ai: true, q, a, order: !rest.length && ctx && ctx.top ? ORDER[a.sort] || "" : "", noSearch: !rest.length && !a.rel && !a.sort && !a.limit && !(ctx && ctx.top) };
   }
 
   // ---------- what the AI gets ----------
@@ -654,6 +657,8 @@ export function createEngine(db, info, store) {
     const rare = known.filter(w => !heads.includes(w) && wordInfo.get(w)?.df <= RARE_WORD).sort((x, y) => wordInfo.get(x).df - wordInfo.get(y).df).slice(0, 2);
     if (!together && heads.length) for (const w of rare) jobs.push(find(w, { kidsOk, min: a.min, max: a.max, sort: a.sort || "rating", limit: 3 }));
     if ((a.rel || /\b(that one|this one|those|them|it|cheaper|dearer|better)\b/.test(qn)) && ctx && ctx.top) jobs.push(findFromCtx(ctx, { sort: "rating", limit: 8, ...stepFrom(a.rel, ctx) }));
+    // "Too expensive" may mean a long way cheaper, not just the next one down.
+    if (a.rel === "cheaper" && ctx && ctx.top) jobs.push(findFromCtx(ctx, { sort: "price-asc", limit: 4, ...stepFrom(a.rel, ctx) }));
     // Two words that all match are a kind of thing ("fishing rod"), but three or more may be a product's name, which the
     // word search can hide behind what it filters out: "seaflo manual bilge pump" is an accessory.
     const nameSearch = !together || known.length > 2 ? named(q) : null;
@@ -682,7 +687,7 @@ export function createEngine(db, info, store) {
     for (const p of byName) add(p);
     // What was actually said, after what it might have meant, in case the correction is wrong.
     if (asSaid) for (const p of asSaid.rows) if (p.stock > 0) add(p);
-    if (ctx && ctx.top && !pool.length && !a.rel) { const r = await findFromCtx(ctx, { sort: "rating", limit: 6 }); r.rows.forEach(add); }
+    if (ctx && ctx.top && !pool.length && !a.rel) { const r = await findFromCtx(ctx, { sort: a.sort || "rating", limit: a.sort ? 12 : 6 }); r.rows.forEach(add); }
     // A product word in the question is enough to go on, and so is a follow-up: "cheaper" with nothing cheaper left
     // is still an answer. Only with neither does the AI plan its own search.
     return { pool, strong: matched || shelves.length > 0 || (heads.length > 0 && pool.length > 0) || !!(a.rel && ctx && ctx.top) || !!guessed?.rows.length || byName[0]?.sim >= NAME_SURE };
@@ -708,6 +713,7 @@ Recommend one product, or a second only if it's clearly different, like a cheape
 Only mention products that answer this question. If it isn't about products, don't add any.
 For "best" or "good", favour higher ratings with more reviews.
 If they ask for something cheaper, better or bigger than what you last named and nothing listed really is, say what you named is already the cheapest, best or biggest we have.
+If the PRODUCTS heading names what they're cheaper, better or bigger than, that's what "this" or "these" means.
 If the PRODUCTS heading gives an order, it's true: answer with the first product that really is what they asked for, skipping accessories and parts for it.
 Accessories (bags, covers, pegs, spare parts) aren't the product itself, so never offer one as a cheaper version of it. Don't suggest kids' products unless they ask.
 Don't recommend anything marked SOLD OUT. Only call a product sold out if its own line is marked SOLD OUT: if they ask by name for one of those, say so and offer an in-stock alternative from the list. Any other product is here, so tell them where it is.
@@ -730,7 +736,7 @@ ${services}`;
     const messages = [{ role: "system", content: aiSystem() }];
     // The past answers keep a tag so the model doesn't copy a habit of leaving it off.
     for (const t of (chat || []).slice(-2)) messages.push({ role: "user", content: `QUESTION\n${String(t.q).slice(0, 300)}` }, { role: "assistant", content: `${String(t.say).slice(0, 400)} ${t.ok ? "[[1]]" : "[[]]"}` });
-    messages.push({ role: "user", content: `PRODUCTS${order ? ` (${order})` : ""}\n${products || (nothing ? `(nothing is ${nothing[1].toLowerCase()} than what you last named)` : "(none matched)")}\n\nQUESTION (${spoken ? "spoken" : "typed"})\n${String(q).slice(0, 300)}\n\nEnd with the [[numbers]].` });
+    messages.push({ role: "user", content: `PRODUCTS${order ? ` (${order})` : ""}\n${products || (order ? `(there's nothing ${order})` : nothing ? `(nothing is ${nothing[1].toLowerCase()} than what you last named)` : "(none matched)")}\n\nQUESTION (${spoken ? "spoken" : "typed"})\n${String(q).slice(0, 300)}\n\nEnd with the [[numbers]].` });
     return messages;
   }
 
