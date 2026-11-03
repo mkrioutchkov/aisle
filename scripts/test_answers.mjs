@@ -465,6 +465,12 @@ for (const q of ["are the prices real", "is the stock real", "are these products
     const rows = [...(r.items || []).map(i => i.p), ...(r.pool || [])];
     ok(rows.some(has40) && !rows.slice(0, 1).some(p => /\b[0-9]+\/0\b/.test(p.name) && !has40(p)), `${q}: should find 4/0 hooks first: ${rows.slice(0, 3).map(p => p.name)}`);
   }
+  // The AI's own search usually asks for rating order, which a size mustn't fall out of.
+  const shoes4 = await ask("shoes");
+  for (const sort of ["rating", "price-asc"]) {
+    const r = await ask("those in four slash zero", { ctx: shoes4.ctx, plan: { same: false, searches: [{ q: "4/0 fishing hooks", sort }] } });
+    ok(r.pool?.[0] && has40(r.pool[0]), `a planned search for 4/0 hooks by ${sort}: ${(r.pool || []).slice(0, 2).map(p => p.name)}`);
+  }
   const sized = await ask("2/0 hooks");
   ok((sized.items || []).concat((sized.pool || []).map(p => ({ p }))).every(x => x.p.name.includes("2/0")), `2/0 hooks should only be 2/0: ${(sized.items || []).map(i => i.p.name)}`);
   for (const q of ["four slash zero fishing hooks", "4 space 0 fishing hooks", "20 pound fishing line", "i need shoes for walking on rocks", "is the coleman tent waterproof"]) {

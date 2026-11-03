@@ -47,13 +47,16 @@ export function createEngine(db, info, store) {
     const size = String(about).match(/\b\d+\/\d+\b/)?.[0];
     if (size) {
       const rest = String(about).replace(size, " "), limit = opts.limit || 12;
-      const search = text => find(text, { ...opts, phrase: ` ${size.replace("/", " ")} `, limit: 120 });
+      // Ranked by relevance whatever was asked for, or a size can sit outside the top of a rating or price order.
+      const search = text => find(text, { ...opts, sort: "relevance", phrase: ` ${size.replace("/", " ")} `, limit: 120 });
       let r = await search(rest), rows = r.rows.filter(p => p.name.includes(size));
       // Other words can rule it out ("fish hooks"): the kind of product and the size are what matter.
       if (!rows.length) {
         const kind = words(rest).filter(isKnown).pop();
         if (kind) { r = await search(kind); rows = r.rows.filter(p => p.name.includes(size)); }
       }
+      const order = { "price-asc": (x, y) => x.price - y.price, "price-desc": (x, y) => y.price - x.price, rating: (x, y) => (y.bayes || 0) - (x.bayes || 0) }[opts.sort];
+      if (order) rows.sort(order);
       return { ...r, rows: rows.slice(0, limit), count: rows.length, kind_count: rows.length };
     }
     const T = termsOf(about);
