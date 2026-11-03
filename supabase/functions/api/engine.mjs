@@ -289,15 +289,7 @@ export function createEngine(db, info, store) {
       const broad = await sortedList(about, sort, opts);
       return { pool: [...new Map([...main.shelf, ...broad.shelf].map(p => [p.id, p])).values()].slice(0, 18), order: "", likely: [] };
     }
-    const searches = (plan.searches || []).slice(0, 3).filter(s => s && s.q);
-    if (!searches.length) {
-      if (!about && !ctx?.cat) return { pool: [], order: "", likely: [] };
-      const list = await sortedList(about, "rating", { ...base, kidsOk: !!ctx?.kidsOk });
-      return { pool: list.shelf.slice(0, 8), order: "", likely: [] };
-    }
-    const lists = await Promise.all(searches.map(s => sortedList(String(s.q), ORDER[s.sort] ? s.sort : "rating", { kidsOk: KIDS_RE.test(String(s.q).toLowerCase()), min: s.min ?? null, max: s.max ?? null })));
-    if (lists.length === 1) return { pool: lists[0].shelf, order: ORDER[searches[0].sort] || ORDER.rating, likely: lists[0].likely };
-    return { pool: [...new Map(lists.flatMap(l => l.shelf.slice(0, 6)).map(p => [p.id, p])).values()].slice(0, 18), order: "", likely: [] };
+    return { pool: [], order: "", likely: [] };
   }
 
   async function ranked(a, about, label, q, baseOpts = {}) {
@@ -788,7 +780,7 @@ You only know what the product lines show. If they ask for a colour, size or mat
 Only mention products that answer this question. If it isn't about products, don't add any.
 For "best" or "good", favour higher ratings with more reviews.
 If they ask for something cheaper, better or bigger than what you last named and nothing listed really is, say what you named is already the cheapest, best or biggest we have.
-If the PRODUCTS heading gives an order, it's true: answer with the first product that really is what they asked for, skipping accessories and parts for it.
+If the PRODUCTS heading gives an order, it's true: answer with the first product that really is what they asked for, skipping only accessories and parts for it. A different style of the same thing still counts.
 Accessories (bags, covers, pegs, spare parts) aren't the product itself, so never offer one as a cheaper version of it. Don't suggest kids' products unless they ask.
 Don't recommend anything marked SOLD OUT. Only call a product sold out if its own line is marked SOLD OUT: if they ask by name for one of those, say so and offer an in-stock alternative from the list. Any other product is here, so tell them where it is.
 If nothing in the list fits, say you couldn't find it (not that the store doesn't sell it) and point them to the right aisle from the STORE GUIDE or the service desk. Never send them to another retailer.
@@ -826,7 +818,7 @@ ${services}`;
         { role: "system", content: `You work out what a shopper at an Australian outdoor store wants next, reading their question as part of the CONVERSATION. A spoken question may have a misheard word and a typed one a typo, so work out what they meant. Reply with JSON only: {"meant":"","items":[],"same":true,"extra":"","sort":"rating","max":null,"searches":[]}.
 Put what they meant in meant, in plain corrected words.
 If they've named several different things they want, not a choice between them, put each in items in plain corrected words and stop there. Speech swallows or mishears small words, so "to" can be "a", and a word said twice may be two separate things.
-If it's about what they searched for, set same to true. Put any new detail in extra, as plain words a product name would contain, such as who it's for, otherwise leave it empty. Use sort (rating, price-asc or price-desc) and max (dollars or null) for what they want done about price or quality: a complaint about the price means price-asc.
+If it's about what they searched for or a product they were shown, set same to true. Put any new detail from this question in extra, as plain words a product name would contain, such as who it's for, otherwise leave it empty. Use sort (rating, price-asc or price-desc) and max (dollars or null) for what they want done about price or quality: a complaint about the price means price-asc.
 If it's about one particular product or something different, set same to false and give searches, each {"q":"2 or 3 plain product words","sort":"rating","max":null}, using words from the catalogue below. If it isn't about products, set same to false with no searches.
 
 CATALOGUE
@@ -858,9 +850,10 @@ ${guide}` },
     const top = picks[0];
     // A ranking shows what comes next on the list as well, after what the AI picked. Only the pick goes on the map.
     const next = top ? likely.filter(p => pool.indexOf(p) > pool.indexOf(top) && !picks.includes(p)).slice(0, Math.max(0, 3 - picks.length)) : [];
-    // Someone who said it costs too much sees what's cheaper too, in price order, even if the AI preferred something else.
+    // Someone who said it costs too much sees what's cheaper too, even if the AI preferred something else. Its pick stays
+    // first so the card matches the sentence: "the cheapest oven is the Koda" under a gas burner card reads wrong.
     const cheaper = top && fromTop ? likely.filter(p => pool.indexOf(p) < pool.indexOf(top) && !picks.includes(p)).slice(0, 2) : [];
-    const cards = cheaper.length ? [...cheaper, ...picks].sort((x, y) => pool.indexOf(x) - pool.indexOf(y)) : [...picks, ...next];
+    const cards = cheaper.length ? [...picks, ...cheaper] : [...picks, ...next];
     return {
       route: "ai", say: text, sub: "", items: items(cards), marks: picks, ok: picks.length > 0,
       ctx: top ? { fromAi: true, about: "", cat: top.cat, label: top.cat.toLowerCase(), kidsOk: KIDS_RE.test(String(q).toLowerCase()), persons: null, top: { id: top.id, price: top.price, bayes: top.bayes, size: top.size ?? null, name: top.name, cat: top.cat }, shown: picks.map(p => p.id) } : null,

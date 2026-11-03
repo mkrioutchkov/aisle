@@ -335,7 +335,7 @@ for (const [q, wording] of [["pocket knife", /pocket knives/], ["first aid", /fi
   {
     const list = [{ id: "a", name: "Fish Shoes", price: 20, aisle: 1, bay: 1, cat: "Shoes" }, { id: "b", name: "Aqua Shoes", price: 30, aisle: 1, bay: 2, cat: "Shoes" }, { id: "c", name: "Snow Boots", price: 45, aisle: 1, bay: 3, cat: "Shoes" }];
     const cards = engine.aiAnswer("The Snow Boots are $45, Aisle 1, Bay 3. [[3]]", list, "q", list, true);
-    ok(cards.items.map(i => i.p.price).join() === "20,30,45" && cards.marks.length === 1, `cheaper cards come first: ${cards.items.map(i => i.p.price)}`);
+    ok(cards.items.map(i => i.p.price).join() === "45,20,30" && cards.marks.length === 1, `the pick, then what's cheaper: ${cards.items.map(i => i.p.price)}`);
     ok(engine.aiAnswer("The Snow Boots are $45, Aisle 1, Bay 3. [[3]]", list, "q", list).items.length === 1, "without that, the pick stays first");
   }
   same("Try the Seaflo Adult Kayak at $199, Aisle 14, Bay 10.", [2]);
@@ -423,10 +423,16 @@ for (const q of ["are the prices real", "is the stock real", "are these products
   ok(kids.pool.length && kids.pool.slice(0, 3).every(p => /kid|junior|youth|boy|girl|child/i.test(`${p.name} ${p.cat}`)), `any for kids: ${kids.pool.slice(0, 3).map(p => p.name)}`);
   const black = await ask("in black", { ctx: shoes.ctx, plan: { same: true, extra: "black", sort: "rating" } });
   ok(black.pool.filter(p => /shoe|boot/i.test(p.name)).length >= 3, `in black should keep shoes on the shelf: ${black.pool.slice(0, 4).map(p => p.name)}`);
-  const first = await ask("how much is the first one", { ctx: shoes.ctx, plan: { same: false, searches: [] } });
+  const first = await ask("how much is the first one", { ctx: shoes.ctx, plan: { same: true, sort: "rating" } });
   ok(first.pool.length > 0 && /first product they were shown/.test(first.q), `the first one needs something to go on: ${first.pool.length} ${first.q}`);
   const newOne = await ask("what about a merrell moab", { ctx: shoes.ctx, plan: { same: false, searches: [{ q: "merrell moab", sort: "rating" }] } });
   ok(newOne.pool.some(p => /moab/i.test(p.name)), `a search the AI asks for: ${(newOne.pool || []).slice(0, 2).map(p => p.name)}`);
+  // Something new searches the question's own words too, whatever the AI asked for, and leaves what they were looking at.
+  for (const [q, re] of [["do you have like a frisbee", /frisbee/i], ["door hinge", /hinge/i]]) {
+    const r = await ask(q, { voice: true, ctx: shoes.ctx, plan: { same: false, searches: [] } });
+    ok(r.pool.some(p => re.test(p.name)), `${q}: the store has these: ${r.pool.slice(0, 3).map(p => p.name)}`);
+    ok(!r.pool.some(p => /shoe/i.test(p.name)) && !/first product they were shown/.test(r.q), `${q}: shouldn't bring the shoes along: ${r.pool.slice(0, 3).map(p => p.name)}`);
+  }
   ok((await ask("a tent, a stove and some gas", { ctx: shoes.ctx })).route === "list", "a list stays a list mid-conversation");
   ok(/toilet/i.test((await ask("where are the toilets", { ctx: shoes.ctx })).say || ""), "a store fact stays a store fact mid-conversation");
   const noSubject = await ask("too expensive");

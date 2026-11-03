@@ -164,8 +164,9 @@ Deno.serve(async req => {
       if (list) return json({ type: "answer", heard: q, ...list, timing: {} });
     }
     if (r.followUp && body.plan) {
-      const list = await engine.followUpShelf(body.plan, body.ctx);
-      return json({ type: "answer", route: "ai", dry: true, followUp: true, q: engine.followUpQuestion(questionForAi, body.plan, body.ctx), order: list.order, pool: list.pool, likely: list.likely, timing: {} });
+      const own = body.plan.same ? null : await engine.shelf(questionForAi, r.a, null, r.guess);
+      const list = own ? { pool: await engine.planned(body.plan.searches || [], own.pool), order: "", likely: [] } : await engine.followUpShelf(body.plan, body.ctx);
+      return json({ type: "answer", route: "ai", dry: true, followUp: true, q: engine.followUpQuestion(questionForAi, body.plan, own ? null : body.ctx), order: list.order, pool: list.pool, likely: list.likely, timing: {} });
     }
     const s = r.noSearch ? { pool: [], strong: true } : r.followUp ? { pool: [], strong: false } : r.shelf ? { pool: r.shelf, strong: true } : await engine.shelf(questionForAi, r.a, body.ctx || null, r.guess);
     return json({ type: "answer", route: "ai", dry: true, followUp: !!r.followUp, q: questionForAi, order: r.order || "", strong: s.strong, pool: s.pool, note: r.note || "", fallback: r.fallback || null, timing: { server_ms: Math.round(performance.now() - t0) } });
@@ -202,9 +203,13 @@ Deno.serve(async req => {
           }
           if (!plan.searches.length && Array.isArray(plan.items)) plan.searches = plan.items.map((item: unknown) => ({ q: item }));
           if (!r.followUp) shelf = { ...shelf, pool: await engine.planned(plan.searches, shelf.pool) };
-          // A follow-up with no plan falls back on the words of the question.
-          else if (plan.failed >= AI_SERVICES.length) shelf = await engine.shelf(questionForAi, r.a, body.ctx || null, r.guess);
-          else {
+          // Not about what they were looking at, or no plan at all: an ordinary search on their own words, because the plan
+          // can't know the whole catalogue, with whatever it asked for on top. "do you have a frisbee" gets the frisbees.
+          else if (plan.failed >= AI_SERVICES.length || !plan.same) {
+            const own = await engine.shelf(questionForAi, r.a, null, r.guess);
+            shelf = { pool: await engine.planned(plan.searches, own.pool), strong: true };
+            question = engine.followUpQuestion(questionForAi, plan, null);
+          } else {
             const list = await engine.followUpShelf(plan, body.ctx);
             shelf = { pool: list.pool, strong: true };
             order = list.order;
