@@ -2,8 +2,8 @@
 // the store layout: the catalogue and live stock stay in Postgres, and the phone carries the short conversation
 // memory (ctx, chat), so any server instance can answer any question.
 import {
-  ADD_ONS, ADVICE_RE, ALONE, NARROWING, CONCEPTS, HEAD, KITS, KIT_NOISE, KIT_RE, KIT_TOPIC, KIDS_RE, NUM, NUMW, REAL_RE, REL_SORT, SMALLTALK, STOP, STORE_RE, SYN, ZONE_OF,
-  RANK_ADVICE_RE, cap, lev, money, norm, parseAsk, sound, soundClass, stem, toks, unhushed, where, words,
+  ADD_ONS, ADVICE_RE, ALONE, CONCEPTS, HEAD, KITS, KIT_NOISE, KIT_RE, KIT_TOPIC, KIDS_RE, NUM, NUMW, REAL_RE, REL_SORT, SMALLTALK, STOP, STORE_RE, SYN, ZONE_OF,
+  RANK_ADVICE_RE, cap, headsOf, lev, money, norm, parseAsk, sound, soundClass, stem, toks, unhushed, where, words,
 } from "./text.mjs";
 
 const NOT_FOUND = "Hmm, I couldn't find that one. Try other words, or ask the team at the service desk (front right).";
@@ -14,7 +14,6 @@ const LEAD_IN = /^\s*(?:(?:hi|hey|gday|mate|ok|okay|alright|um|uh|so|well|yeah|r
 // printed 0.8 to 1, and ordinary questions rarely reach 0.5.
 const NAME_SURE = 0.5, NAME_EXACT = 0.8, NAME_SPREAD = 0.2;
 const RARE_WORD = 10;
-const STEP = { cheaper: "cheaper than", dearer: "dearer than", better: "rated higher than", bigger: "bigger than", smaller: "smaller than" };
 const ORDER = { "price-asc": "cheapest first", "price-desc": "dearest first", rating: "highest rated first", popular: "most reviewed first" };
 const BUYING_RE = /\b(sell|sells|stock|stocks|stocked|buy|buying|how much|prices?|costs?)\b/;
 
@@ -23,6 +22,8 @@ export function createEngine(db, info, store) {
   // The catalogue's words are kept in memory, so checking a word costs no database call.
   const wordInfo = info.words;
   const isKnown = w => !!wordInfo.get(w) || !!SYN[w];
+  // The kinds of product the store has, from its own categories.
+  const KINDS = new Set(info.aisles.flatMap(a => a.cats || []).flatMap(c => headsOf(c)));
   const idf = w => Math.log(1 + CATALOGUE / ((wordInfo.get(w) || {}).df || 1));
   const altsOf = w => [...new Set([w, ...(SYN[w] || "").split("|").flatMap(s => (s ? toks(s) : []))])];
 
@@ -235,13 +236,67 @@ export function createEngine(db, info, store) {
   // too, so "cheapest" stays honest.
   async function rankedForAi(r, a, about, q, baseOpts, opts) {
     if (opts.single || !/^Checked /.test(r.sub || "")) return r;
-    const sort = a.sort || (a.persons ? "fit" : "rating"), head = headOf(about) || [];
-    const wide = await find(about, { kidsOk: KIDS_RE.test(q.toLowerCase()), persons: a.persons || null, ...baseOpts, min: a.min, max: a.max, sort, limit: 120 });
+    const sort = a.sort || (a.persons ? "fit" : "rating");
+    const { shelf, likely } = await sortedList(about, sort, { kidsOk: KIDS_RE.test(q.toLowerCase()), persons: a.persons || null, ...baseOpts, min: a.min, max: a.max });
+    return { ai: true, ranked: true, q, a, shelf, likely, order: ORDER[sort] || "", note: r.sub, fallback: { ...r, sub: "" } };
+  }
+
+  async function sortedList(about, sort, opts) {
+    const head = headOf(about) || [];
+    const wide = await find(about, { ...opts, sort, limit: 120 });
     // "daypack" counts as a pack.
-    const endsInIt = p => { const last = toks(p.name).filter(t => !/\d/.test(t)).pop() || ""; return head.some(h => last.endsWith(h)); };
+    const endsInIt = p => { const last = toks(p.name).filter(t => !/\d/.test(t)).pop() || ""; return !head.length || head.some(h => last.endsWith(h)); };
     const keep = new Set([...wide.rows.filter(endsInIt).slice(0, 12), ...wide.rows.filter(p => !endsInIt(p)).slice(0, 6)]);
     const shelf = wide.rows.filter(p => keep.has(p));
-    return { ai: true, ranked: true, q, a, shelf, likely: shelf.filter(endsInIt), order: ORDER[sort] || "", note: r.sub, fallback: { ...r, sub: "" } };
+    return { shelf, likely: shelf.filter(endsInIt) };
+  }
+
+  // Mid-conversation, anything that doesn't name a kind of product is about what's being discussed, in whatever words:
+  // "these are two expensive", "any for kids", "in black". No list of phrases can keep up with that, and speech bends them
+  // anyway, so the AI reads it with the conversation and says what to search for. If it's unavailable, the plain answer
+  // when there are no other words to misread, otherwise what they were looking at.
+  async function followUp(q, a, opts) {
+    const ctx = opts.ctx;
+    const plain = words(a.rest).length ? (ctx.about ? await plainAnswer(q, ctx.about) : null) : await answerOne(q, { ...opts, single: true });
+    return { ai: true, followUp: true, q, a, fallback: plain && !plain.ai ? plain : null };
+  }
+
+  // The answer is written separately, so it needs telling what was worked out, and what "the first one" means: the answer
+  // it's following may only have said where they are. Not for a price order, where a hiking shoe first on the shelf turned
+  // "too expensive" into "a cheaper hiking shoe" at $100, with shoes at $19.99 listed.
+  function followUpQuestion(q, plan, ctx) {
+    const notes = [
+      plan.meant && `They mean: ${String(plan.meant).slice(0, 120)}`,
+      plan.same && ctx?.about && `What they searched for: ${ctx.about}`,
+      !/^price/.test(plan.sort || "") && ctx?.top?.name && `The first product they were shown: ${ctx.top.name} at ${money(ctx.top.price)}`,
+    ].filter(Boolean);
+    return notes.length ? `${q}\n(${notes.join(". ")}.)` : q;
+  }
+
+  // What the AI decided they want. It says what to do, not what to search for, when it's the same thing: left to choose the
+  // words it turned "shoes" into "hiking shoes" after seeing a hiking shoe, and missed the cheapest ones.
+  async function followUpShelf(plan, ctx) {
+    const about = ctx?.about || "", base = about ? {} : { cat: ctx?.cat };
+    if (plan.same && (about || ctx?.cat)) {
+      const extra = String(plan.extra || "").trim(), sort = ORDER[plan.sort] ? plan.sort : "rating";
+      const opts = { ...base, kidsOk: !!ctx.kidsOk || KIDS_RE.test(extra.toLowerCase()), min: null, max: plan.max ?? null };
+      const main = await sortedList(`${extra} ${about}`.trim(), sort, opts);
+      if (!extra) return { pool: main.shelf, order: ORDER[sort], likely: main.likely, fromTop: sort === "price-asc" };
+      if (main.shelf.length >= 6) return { pool: main.shelf, order: ORDER[sort], likely: [] };
+      // Colours and sizes are rarely in a name, so what's being discussed stays on the shelf: "in black" after shoes
+      // otherwise finds only a JetBlack bike rack.
+      const broad = await sortedList(about, sort, opts);
+      return { pool: [...new Map([...main.shelf, ...broad.shelf].map(p => [p.id, p])).values()].slice(0, 18), order: "", likely: [] };
+    }
+    const searches = (plan.searches || []).slice(0, 3).filter(s => s && s.q);
+    if (!searches.length) {
+      if (!about && !ctx?.cat) return { pool: [], order: "", likely: [] };
+      const list = await sortedList(about, "rating", { ...base, kidsOk: !!ctx?.kidsOk });
+      return { pool: list.shelf.slice(0, 8), order: "", likely: [] };
+    }
+    const lists = await Promise.all(searches.map(s => sortedList(String(s.q), ORDER[s.sort] ? s.sort : "rating", { kidsOk: KIDS_RE.test(String(s.q).toLowerCase()), min: s.min ?? null, max: s.max ?? null })));
+    if (lists.length === 1) return { pool: lists[0].shelf, order: ORDER[searches[0].sort] || ORDER.rating, likely: lists[0].likely };
+    return { pool: [...new Map(lists.flatMap(l => l.shelf.slice(0, 6)).map(p => [p.id, p])).values()].slice(0, 18), order: "", likely: [] };
   }
 
   async function ranked(a, about, label, q, baseOpts = {}) {
@@ -510,6 +565,14 @@ export function createEngine(db, info, store) {
     const first = parseAsk(heard), content = words(first.rest), lower = heard.toLowerCase().replace(/['’]/g, "");
     const alone = ALONE[content.join(" ")];
     if (alone) return routeOne(heard.toLowerCase().replace(new RegExp(`\\b${content[0]}s?\\b`), alone), opts);
+    const namesKind = content.length > 0 && altsOf(content[content.length - 1]).some(w => KINDS.has(w));
+    if (opts.ctx?.top && !opts.single && !namesKind && !KIT_RE.test(qnHeard)) {
+      if (/,|\band\b/.test(lower)) {
+        const list = await listAnswer(heard, opts);
+        if (list) return list;
+      }
+      return followUp(heard, first, opts);
+    }
     const allKnown = content.length > 0 && content.every(isKnown);
     const correctable = !first.ai && !ADVICE_RE.test(qnHeard);
     // "the kayaks and the life jackets" clearly says two things.
@@ -584,26 +647,13 @@ export function createEngine(db, info, store) {
   }
 
   async function answerOne(q, opts) {
-    const qn = norm(q), a = parseAsk(q), ctx = opts.ctx;
-    let rest = words(a.rest);
-    // Mid-conversation, "in black" or "any for kids" narrows down what's being discussed. It's not asking about black
-    // things or kids, so the AI answers it, looking at what fits both.
-    const narrowing = ctx && ctx.top && rest.length > 0 && rest.every(w => NARROWING.has(w) || /^\d+$/.test(w)) && (ctx.about || ctx.label);
-    if (narrowing) {
-      a.rest = `${ctx.about || ctx.label} ${a.rest}`;
-      a.narrowing = true;
-      rest = words(a.rest);
-    }
+    const qn = norm(q), a = parseAsk(q), rest = words(a.rest), ctx = opts.ctx;
     // Follow-ups: "got anything cheaper?", "something else".
-    if (a.complaint && !rest.length && !(ctx && ctx.top)) return { ai: true, q, a, noSearch: true };
     if (a.rel && !rest.length && ctx && ctx.top) {
       // After an AI answer the subject is what it recommended, not a search, so "cheaper" needs its judgement too.
-      // The answer it follows may only have said where they are, so the AI needs telling what "these" means.
-      const order = STEP[a.rel] && ctx.top.name ? `${STEP[a.rel]} the ${ctx.top.name} at ${money(ctx.top.price)}` : "";
-      if (ctx.fromAi) return { ai: true, q, a, order };
+      if (ctx.fromAi) return { ai: true, q, a };
       const r = await relative(a.rel, ctx);
-      // "anything cheaper" after tent pegs shouldn't offer floor mats just because they're tent accessories too.
-      if (r) return opts.single ? r : { ai: true, q, a, order, fallback: r };
+      if (r) return r;
     }
     if (a.rel && rest.length && !a.sort) a.sort = REL_SORT[a.rel] || null;
 
@@ -627,7 +677,7 @@ export function createEngine(db, info, store) {
         if (r) return rest.length ? rankedForAi(r, a, a.rest, q, {}, opts) : r;
       }
     }
-    if (!narrowing && !a.sort && !a.limit && !a.persons && !a.rel && isExactLookup(q, a, opts.single)) {
+    if (!a.sort && !a.limit && !a.persons && !a.rel && isExactLookup(q, a, opts.single)) {
       const r = await plainAnswer(q, a.rest);
       if (r) return r;
     }
@@ -668,11 +718,6 @@ export function createEngine(db, info, store) {
     const rare = known.filter(w => !heads.includes(w) && wordInfo.get(w)?.df <= RARE_WORD).sort((x, y) => wordInfo.get(x).df - wordInfo.get(y).df).slice(0, 2);
     if (!together && heads.length) for (const w of rare) jobs.push(find(w, { kidsOk, min: a.min, max: a.max, sort: a.sort || "rating", limit: 3 }));
     if ((a.rel || /\b(that one|this one|those|them|it|cheaper|dearer|better)\b/.test(qn)) && ctx && ctx.top) jobs.push(findFromCtx(ctx, { sort: "rating", limit: 8, ...stepFrom(a.rel, ctx) }));
-    // Colours and sizes are rarely in a product's name, so what's being discussed stays on the shelf: "in black" after
-    // shoes otherwise finds only a JetBlack bike rack.
-    if (a.narrowing) jobs.push(findFromCtx(ctx, { sort: "rating", limit: 6 }));
-    // "Too expensive" may mean a long way cheaper, not just the next one down.
-    if (a.rel === "cheaper" && ctx && ctx.top) jobs.push(findFromCtx(ctx, { sort: "price-asc", limit: 4, ...stepFrom(a.rel, ctx) }));
     // Two words that all match are a kind of thing ("fishing rod"), but three or more may be a product's name, which the
     // word search can hide behind what it filters out: "seaflo manual bilge pump" is an accessory.
     const nameSearch = !together || known.length > 2 ? named(q) : null;
@@ -728,7 +773,6 @@ You only know what the product lines show. If they ask for a colour, size or mat
 Only mention products that answer this question. If it isn't about products, don't add any.
 For "best" or "good", favour higher ratings with more reviews.
 If they ask for something cheaper, better or bigger than what you last named and nothing listed really is, say what you named is already the cheapest, best or biggest we have.
-If the PRODUCTS heading names what they're cheaper, better or bigger than, that's what "this" or "these" means.
 If the PRODUCTS heading gives an order, it's true: answer with the first product that really is what they asked for, skipping accessories and parts for it.
 Accessories (bags, covers, pegs, spare parts) aren't the product itself, so never offer one as a cheaper version of it. Don't suggest kids' products unless they ask.
 Don't recommend anything marked SOLD OUT. Only call a product sold out if its own line is marked SOLD OUT: if they ask by name for one of those, say so and offer an in-stock alternative from the list. Any other product is here, so tell them where it is.
@@ -751,11 +795,29 @@ ${services}`;
     const messages = [{ role: "system", content: aiSystem() }];
     // The past answers keep a tag so the model doesn't copy a habit of leaving it off.
     for (const t of (chat || []).slice(-2)) messages.push({ role: "user", content: `QUESTION\n${String(t.q).slice(0, 300)}` }, { role: "assistant", content: `${String(t.say).slice(0, 400)} ${t.ok ? "[[1]]" : "[[]]"}` });
-    messages.push({ role: "user", content: `PRODUCTS${order ? ` (${order})` : ""}\n${products || (order ? `(there's nothing ${order})` : nothing ? `(nothing is ${nothing[1].toLowerCase()} than what you last named)` : "(none matched)")}\n\nQUESTION (${spoken ? "spoken" : "typed"})\n${String(q).slice(0, 300)}\n\nEnd with the [[numbers]].` });
+    messages.push({ role: "user", content: `PRODUCTS${order ? ` (${order})` : ""}\n${products || (nothing ? `(nothing is ${nothing[1].toLowerCase()} than what you last named)` : "(none matched)")}\n\nQUESTION (${spoken ? "spoken" : "typed"})\n${String(q).slice(0, 300)}\n\nEnd with the [[numbers]].` });
     return messages;
   }
 
-  function planMessages(q, spoken = false) {
+  function planMessages(q, spoken = false, convo = null) {
+    const past = convo ? [
+      ...(convo.chat || []).slice(-2).flatMap(t => [`They asked: ${String(t.q).slice(0, 200)}`, `They were told: ${String(t.say).slice(0, 300)}`]),
+      convo.about ? `What they searched for: ${convo.about}` : "",
+      convo.top?.name ? `The first product they were shown: ${convo.top.name} at ${money(convo.top.price)}` : "",
+    ].filter(Boolean).join("\n") : "";
+    if (past) {
+      const guide = info.aisles.map(a => `${a.label}: ${(a.cats || []).slice(0, 8).join(", ")}`).join("\n");
+      return [
+        { role: "system", content: `You work out what a shopper at an Australian outdoor store wants next, reading their question as part of the CONVERSATION. A spoken question may have a misheard word and a typed one a typo, so work out what they meant. Reply with JSON only: {"meant":"","same":true,"extra":"","sort":"rating","max":null,"searches":[]}.
+Put what they meant in meant, in plain corrected words.
+If it's about what they searched for, set same to true. Put any new detail in extra, as plain words a product name would contain, such as who it's for, otherwise leave it empty. Use sort (rating, price-asc or price-desc) and max (dollars or null) for what they want done about price or quality: a complaint about the price means price-asc.
+If it's about one particular product or something different, set same to false and give searches, each {"q":"2 or 3 plain product words","sort":"rating","max":null}, using words from the catalogue below. If it isn't about products, set same to false with no searches.
+
+CATALOGUE
+${guide}` },
+        { role: "user", content: `CONVERSATION\n${past}\n\n${spoken ? "Spoken" : "Typed"}: ${String(q).slice(0, 300)}` },
+      ];
+    }
     const guide = info.aisles.map(a => `${a.label}: ${(a.cats || []).slice(0, 8).join(", ")}`).join("\n");
     return [
       { role: "system", content: `You turn a shopper's question at an Australian outdoor store into product searches. Reply with JSON only: {"searches":[{"q":"2 or 3 plain product words","sort":"rating|price-asc|price-desc","max":null}]}. Give 1 to 3 searches for the products that would actually help, using words from the catalogue below. A spoken question may have a misheard word and a typed one a typo, so work out what they meant. If it isn't about products, reply {"searches":[]}.\n\nCATALOGUE\n${guide}` },
@@ -763,21 +825,28 @@ ${services}`;
     ];
   }
 
-  function aiAnswer(raw, pool, q, likely = []) {
+  function aiAnswer(raw, pool, q, likely = [], fromTop = false) {
     const text = raw.replace(/\[\[[^\]]*\]*/g, "").trim();
     // A tag only counts if the answer really talks about that product: its price, its place, or its name. Its name alone
     // won't do when the answer is that it couldn't find it. Once the answer quotes a price, only that price will do:
     // "still the Ooni Koda, $529, Aisle 4, Bay 12" tagged with a pizza peel from the same bay.
     const said = new Set(toks(text)), denied = /\b(couldn.?t|can.?t|cannot|don.?t|didn.?t) (find|have|see|stock)\b/i.test(text);
-    const talksAbout = p => text.includes(money(p.price)) || (!/\$\d/.test(text) && (text.includes(where(p)) || (!denied && toks(p.name).some(w => w.length > 2 && !STOP.has(w) && said.has(w)))));
+    const mostlyNamed = p => { const own = toks(p.name).filter(w => w.length > 2 && !STOP.has(w)); return own.length > 0 && own.filter(w => said.has(w)).length * 2 > own.length; };
+    // A word most of the list shares doesn't say which one: "Ooni" and "pizza" in an answer about ovens, on Ooni accessories.
+    const everywhere = w => pool.filter(o => toks(o.name).includes(w)).length * 2 > pool.length && pool.length > 2;
+    const talksAbout = p => text.includes(money(p.price)) || (!/\$\d/.test(text) && (text.includes(where(p)) || (!denied && toks(p.name).some(w => w.length > 2 && !STOP.has(w) && said.has(w) && !everywhere(w)))));
     let picks = (raw.match(/\[\[([\d,\s]*)\]\]/)?.[1].match(/\d+/g) || []).map(Number).map(n => pool[n - 1]).filter(p => p && talksAbout(p));
     // If the tag went missing, spot the products by the price and location the answer quotes.
     if (!picks.length) picks = pool.filter(p => text.includes(money(p.price)) && text.includes(where(p))).slice(0, 3);
+    if (!picks.length && !denied) picks = pool.filter(mostlyNamed).slice(0, 2);
     const top = picks[0];
     // A ranking shows what comes next on the list as well, after what the AI picked. Only the pick goes on the map.
     const next = top ? likely.filter(p => pool.indexOf(p) > pool.indexOf(top) && !picks.includes(p)).slice(0, Math.max(0, 3 - picks.length)) : [];
+    // Someone who said it costs too much sees what's cheaper too, in price order, even if the AI preferred something else.
+    const cheaper = top && fromTop ? likely.filter(p => pool.indexOf(p) < pool.indexOf(top) && !picks.includes(p)).slice(0, 2) : [];
+    const cards = cheaper.length ? [...cheaper, ...picks].sort((x, y) => pool.indexOf(x) - pool.indexOf(y)) : [...picks, ...next];
     return {
-      route: "ai", say: text, sub: "", items: items([...picks, ...next]), marks: picks, ok: picks.length > 0,
+      route: "ai", say: text, sub: "", items: items(cards), marks: picks, ok: picks.length > 0,
       ctx: top ? { fromAi: true, about: "", cat: top.cat, label: top.cat.toLowerCase(), kidsOk: KIDS_RE.test(String(q).toLowerCase()), persons: null, top: { id: top.id, price: top.price, bayes: top.bayes, size: top.size ?? null, name: top.name, cat: top.cat }, shown: picks.map(p => p.id) } : null,
     };
   }
@@ -810,5 +879,5 @@ ${services}`;
     return { route: "none", say: NOT_FOUND, sub: "", items: [], marks: [], zone: "service", ok: false };
   }
 
-  return { route: routeOne, bestHeard, shelf, planned, aiMessages, planMessages, aiAnswer, fallback };
+  return { route: routeOne, bestHeard, shelf, planned, followUpShelf, followUpQuestion, aiMessages, planMessages, aiAnswer, fallback };
 }

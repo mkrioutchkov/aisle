@@ -147,11 +147,10 @@ for (const [q, match, re] of [["biggest tent", TENT, /(\d+)\s*-?\s*v?\s*person/i
   // After an AI answer the AI takes the follow-up, and it's only offered products that really are cheaper.
   const rec = DB.filter(p => has(ROD, p) && p.stock > 0 && p.price > 100).sort((x, y) => x.price - y.price)[0];
   const fromAi = { fromAi: true, about: "", cat: rec.cat, label: rec.cat.toLowerCase(), kidsOk: false, persons: null, top: { id: rec.id, price: rec.price, bayes: bayes(rec), size: null, name: rec.name, cat: rec.cat }, shown: [rec.id] };
-  const cheaper = await ask("got anything cheaper?", { ctx: fromAi });
-  ok(cheaper.ai && cheaper.strong && cheaper.pool.length > 0 && cheaper.pool.every(p => p.cat === rec.cat && +p.price < rec.price && p.id !== rec.id), `after AI, cheaper should offer the AI only cheaper ${rec.cat}: ${(cheaper.pool || []).map(p => `${p.name} ${p.price}`).join(", ")}`);
+  const cheaper = await ask("got anything cheaper?", { ctx: fromAi, plan: { same: true, sort: "price-asc" } });
+  ok(cheaper.followUp && cheaper.pool.length > 0 && cheaper.pool.every(p => p.cat === rec.cat), `after AI, cheaper should stay on ${rec.cat}: ${(cheaper.pool || []).map(p => `${p.name} ${p.cat}`).slice(0, 3)}`);
   const cheapest = DB.filter(p => p.cat === rec.cat && p.stock > 0).sort((x, y) => x.price - y.price)[0];
-  const none = await ask("got anything cheaper?", { ctx: { ...fromAi, top: { ...fromAi.top, id: cheapest.id, price: cheapest.price } } });
-  ok(none.ai && none.strong && !none.pool.some(p => +p.price >= cheapest.price), `after AI, nothing cheaper should offer nothing dearer: ${(none.pool || []).map(p => `${p.name} ${p.price}`).join(", ")}`);
+  ok(+cheaper.pool[0]?.price === +cheapest.price, `after AI, cheaper should start from the cheapest ${rec.cat}: ${cheaper.pool[0]?.price} vs ${cheapest.price}`);
 }
 
 // Plain lookups: answered straight away, the right thing first, never a near-miss word.
@@ -332,6 +331,13 @@ for (const [q, wording] of [["pocket knife", /pocket knives/], ["first aid", /fi
   same("I can't find snow jackets, sorry. [[1]]", []);
   same("I couldn't find that, but the Seaflo Adult Kayak is $199, Aisle 14, Bay 10. [[2]]", [2]);
   same("The Seaflo is a solid buy. [[2]]", [2]);
+  // Someone who said it costs too much sees what's cheaper than the AI's pick as well, in price order.
+  {
+    const list = [{ id: "a", name: "Fish Shoes", price: 20, aisle: 1, bay: 1, cat: "Shoes" }, { id: "b", name: "Aqua Shoes", price: 30, aisle: 1, bay: 2, cat: "Shoes" }, { id: "c", name: "Snow Boots", price: 45, aisle: 1, bay: 3, cat: "Shoes" }];
+    const cards = engine.aiAnswer("The Snow Boots are $45, Aisle 1, Bay 3. [[3]]", list, "q", list, true);
+    ok(cards.items.map(i => i.p.price).join() === "20,30,45" && cards.marks.length === 1, `cheaper cards come first: ${cards.items.map(i => i.p.price)}`);
+    ok(engine.aiAnswer("The Snow Boots are $45, Aisle 1, Bay 3. [[3]]", list, "q", list).items.length === 1, "without that, the pick stays first");
+  }
   same("Try the Seaflo Adult Kayak at $199, Aisle 14, Bay 10.", [2]);
   same("Sunscreen helps with that. [[1]]", []);
   same("Happy to help. [[]]", []);
@@ -391,38 +397,40 @@ for (const q of ["are the prices real", "is the stock real", "are these products
   ok(!/oven/i.test(`${even.say} ${even.sub} ${even.sentAs}`), `anything even cheaper: ${even.say || even.sentAs}`);
 }
 
-// A complaint about the price wants something cheaper than what was just shown, never the dearest.
+// Mid-conversation, anything that doesn't name a kind of product goes to the AI to work out, however it's put. There's no
+// list of phrases to check here: what it decides is read on real answers.
 {
-  const shoes = await ask("shoes"), top = shoes.items[0].p;
-  const cheapestShoes = await ask("cheapest shoes");
-  for (const q of ["are these are too expensive", "these are too expensive", "too expensive", "too dear", "thats a bit pricey", "that is a bit much", "i cant afford that", "out of my budget", "that costs too much"]) {
+  const shoes = await ask("shoes");
+  for (const q of ["these are too expensive", "these are two expensive", "way out of my price range", "bit rich for me", "in black", "any for kids", "for my wife", "size 10", "is it any good", "anything cheaper", "anything even cheaper", "yeah the cheapest", "which ones are cheapest", "how much is the first one"]) {
     const r = await ask(q, { voice: true, ctx: shoes.ctx });
-    ok(r.viaAi && r.order === "cheapest first", `${q}: should be the cheapest first: ${r.route} ${r.order}`);
-    const prices = (r.pool || []).map(p => +p.price);
-    ok(prices.length && prices.every((p, i) => !i || prices[i - 1] <= p) && prices[0] === +cheapestShoes.pool[0].price, `${q}: should start from the cheapest shoes: ${prices.slice(0, 4)} vs ${cheapestShoes.pool[0].price}`);
+    ok(r.followUp, `${q}: should go to the AI to work out: ${r.route}`);
   }
+  for (const q of ["tent", "a kayak", "cheapest tent", "black tent", "actually do you have tents"]) {
+    const r = await ask(q, { voice: true, ctx: shoes.ctx });
+    ok(!r.followUp, `${q} after shoes is a new subject: ${r.route}`);
+    const rows = [...(r.items || []).map(i => i.p), ...(r.pool || [])];
+    ok(rows.some(p => /tent|kayak/i.test(p.name)), `${q} after shoes: ${rows.slice(0, 3).map(p => p.name)}`);
+  }
+  // What the server does with what the AI decided. The cheapest of what they searched for comes first, whatever was shown.
+  const lowest = await ask("cheapest shoes");
+  const plain = await ask("these are too expensive", { ctx: shoes.ctx, plan: { meant: "too expensive", same: true, sort: "price-asc" } });
+  const prices = plain.pool.map(p => +p.price);
+  ok(prices[0] === +lowest.pool[0].price && prices.every((p, i) => !i || prices[i - 1] <= p) && plain.order === "cheapest first", `too expensive should start from the cheapest shoes: ${prices.slice(0, 4)} vs ${lowest.pool[0].price}`);
+  ok(!/first product they were shown/.test(plain.q), `a price order shouldn't lean on the first product shown: ${plain.q}`);
+  const under = await ask("got anything under a hundred", { ctx: shoes.ctx, plan: { same: true, sort: "price-asc", max: 100 } });
+  ok(under.pool.length && under.pool.every(p => +p.price <= 100), `a price limit should hold: ${under.pool.map(p => p.price)}`);
+  const kids = await ask("any for kids", { ctx: shoes.ctx, plan: { same: true, extra: "kids", sort: "rating" } });
+  ok(kids.pool.length && kids.pool.slice(0, 3).every(p => /kid|junior|youth|boy|girl|child/i.test(`${p.name} ${p.cat}`)), `any for kids: ${kids.pool.slice(0, 3).map(p => p.name)}`);
+  const black = await ask("in black", { ctx: shoes.ctx, plan: { same: true, extra: "black", sort: "rating" } });
+  ok(black.pool.filter(p => /shoe|boot/i.test(p.name)).length >= 3, `in black should keep shoes on the shelf: ${black.pool.slice(0, 4).map(p => p.name)}`);
+  const first = await ask("how much is the first one", { ctx: shoes.ctx, plan: { same: false, searches: [] } });
+  ok(first.pool.length > 0 && /first product they were shown/.test(first.q), `the first one needs something to go on: ${first.pool.length} ${first.q}`);
+  const newOne = await ask("what about a merrell moab", { ctx: shoes.ctx, plan: { same: false, searches: [{ q: "merrell moab", sort: "rating" }] } });
+  ok(newOne.pool.some(p => /moab/i.test(p.name)), `a search the AI asks for: ${(newOne.pool || []).slice(0, 2).map(p => p.name)}`);
+  ok((await ask("a tent, a stove and some gas", { ctx: shoes.ctx })).route === "list", "a list stays a list mid-conversation");
+  ok(/toilet/i.test((await ask("where are the toilets", { ctx: shoes.ctx })).say || ""), "a store fact stays a store fact mid-conversation");
   const noSubject = await ask("too expensive");
-  ok(noSubject.route === "ai" && !noSubject.viaAi && !(noSubject.pool || []).length, `too expensive, with nothing to compare, shouldn't name the cheapest thing in the store: ${noSubject.route} ${noSubject.say}`);
-  // Following up with no product named stays on the same product, however it starts.
-  const footwear = /shoe|boot|sock|slide|thong|sandal|footwear|crocs|gumboot/i;
-  for (const q of ["yeah the cheapest", "yeah just what's the cheapest ones", "which ones are cheapest", "which is the cheapest", "the cheapest ones"]) {
-    const r = await ask(q, { voice: true, ctx: shoes.ctx });
-    ok(r.order === "cheapest first", `${q}: should be in price order: ${r.route} ${r.order}`);
-    ok((r.pool || []).length && r.pool.slice(0, 4).every(p => footwear.test(`${p.name} ${p.cat}`)), `${q}: should stay on shoes: ${(r.pool || []).slice(0, 4).map(p => p.name)}`);
-  }
-  // Narrowing it down stays on the product too, and goes to the AI. On its own, with nothing to narrow, it doesn't change.
-  const inBlack = await ask("in black", { voice: true, ctx: shoes.ctx });
-  ok(inBlack.route === "ai" && (inBlack.pool || []).filter(p => footwear.test(`${p.name} ${p.cat}`)).length >= 3, `in black: shoes should stay on the shelf: ${(inBlack.pool || []).slice(0, 4).map(p => p.name)}`);
-  for (const [q, re] of [["any for kids", /kid|junior|youth|boy|girl|child/i], ["something for women", /women/i]]) {
-    const r = await ask(q, { voice: true, ctx: shoes.ctx });
-    ok(r.route === "ai" && !r.viaAi, `${q}: should go to the AI: ${r.route}`);
-    ok((r.pool || []).length && r.pool.slice(0, 3).every(p => footwear.test(`${p.name} ${p.cat}`) && re.test(`${p.name} ${p.cat}`)), `${q}: should be shoes that fit: ${(r.pool || []).slice(0, 3).map(p => p.name)}`);
-    const alone = await ask(q, { voice: true });
-    ok(alone.route === "exact", `${q}, with nothing to narrow, should stay a plain search: ${alone.route}`);
-  }
-  const blackTent = await ask("black tent", { ctx: shoes.ctx });
-  const blackTentRows = [...(blackTent.items || []).map(i => i.p), ...(blackTent.pool || [])];
-  ok(blackTentRows.some(p => /tent/i.test(p.name)) && !blackTentRows.slice(0, 3).some(p => footwear.test(p.cat)), `black tent after shoes is a new subject: ${blackTentRows.slice(0, 3).map(p => p.name)}`);
+  ok(noSubject.route === "ai" && !noSubject.followUp && !(noSubject.items || []).length, `too expensive, with nothing to compare, shouldn't name a product: ${noSubject.route} ${noSubject.say}`);
   for (const q of ["most expensive tent", "expensive tent"]) {
     const r = await ask(q);
     ok(r.order === "dearest first", `${q}: should still mean the dearest: ${r.order}`);

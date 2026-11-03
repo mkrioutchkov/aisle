@@ -158,8 +158,13 @@ Deno.serve(async req => {
   // Everything else goes to the AI, streamed so the first words show as soon as they exist.
   const questionForAi = r.q || q;
   if (body.dry) {
-    const s = r.noSearch ? { pool: [], strong: true } : r.shelf ? { pool: r.shelf, strong: true } : await engine.shelf(questionForAi, r.a, body.ctx || null, r.guess);
-    return json({ type: "answer", route: "ai", dry: true, q: questionForAi, order: r.order || "", strong: s.strong, pool: s.pool, note: r.note || "", fallback: r.fallback || null, timing: { server_ms: Math.round(performance.now() - t0) } });
+    // A dry run never reaches the AI, so a check can say what it would have decided, to test what the server does with that.
+    if (r.followUp && body.plan) {
+      const list = await engine.followUpShelf(body.plan, body.ctx);
+      return json({ type: "answer", route: "ai", dry: true, followUp: true, q: engine.followUpQuestion(questionForAi, body.plan, body.ctx), order: list.order, pool: list.pool, likely: list.likely, timing: {} });
+    }
+    const s = r.noSearch ? { pool: [], strong: true } : r.followUp ? { pool: [], strong: false } : r.shelf ? { pool: r.shelf, strong: true } : await engine.shelf(questionForAi, r.a, body.ctx || null, r.guess);
+    return json({ type: "answer", route: "ai", dry: true, followUp: !!r.followUp, q: questionForAi, order: r.order || "", strong: s.strong, pool: s.pool, note: r.note || "", fallback: r.fallback || null, timing: { server_ms: Math.round(performance.now() - t0) } });
   }
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -172,21 +177,31 @@ Deno.serve(async req => {
         // Planning counts: if that used up the time, there's less left for the answer.
         const firstWordBy = performance.now() + AI_FIRST_WORD_MS;
         const shelfStart = performance.now();
-        let tries = AI_SERVICES;
-        let shelf = r.noSearch ? { pool: [], strong: true } : r.shelf ? { pool: r.shelf, strong: true } : await engine.shelf(questionForAi, r.a, body.ctx || null, r.guess);
+        let tries = AI_SERVICES, order = r.order, likely = r.likely, question = questionForAi, fromTop = false;
+        let shelf = r.noSearch ? { pool: [], strong: true } : r.followUp ? { pool: [], strong: false } : r.shelf ? { pool: r.shelf, strong: true } : await engine.shelf(questionForAi, r.a, body.ctx || null, r.guess);
         shelfMs = performance.now() - shelfStart;
         // Not sure which shelf this is about: let the AI decide what to search for first.
         if (!shelf.strong) {
           send({ type: "status", text: "Looking through the store..." });
           const planStart = performance.now();
-          const plan = await aiPlan(AI_SERVICES, engine.planMessages(questionForAi, !!body.voice), { tryMs: PLAN_MS });
+          const plan = await aiPlan(AI_SERVICES, engine.planMessages(questionForAi, !!body.voice, r.followUp ? { chat: body.chat, top: body.ctx?.top, about: body.ctx?.about || body.ctx?.label } : null), { tryMs: PLAN_MS });
           // DeepSeek has just shown it's in trouble, so don't spend the time left waiting on it again.
           if (plan.failed && AI_SERVICES.length > 1) tries = AI_SERVICES.slice(1);
-          shelf = { ...shelf, pool: await engine.planned(plan.searches, shelf.pool) };
+          if (!r.followUp) shelf = { ...shelf, pool: await engine.planned(plan.searches, shelf.pool) };
+          // A follow-up with no plan falls back on the words of the question.
+          else if (plan.failed >= AI_SERVICES.length) shelf = await engine.shelf(questionForAi, r.a, body.ctx || null, r.guess);
+          else {
+            const list = await engine.followUpShelf(plan, body.ctx);
+            shelf = { pool: list.pool, strong: true };
+            order = list.order;
+            likely = list.likely;
+            fromTop = !!list.fromTop;
+            question = engine.followUpQuestion(questionForAi, plan, body.ctx);
+          }
           planMs = performance.now() - planStart;
         }
         if (tries.length < 2) tries = [tries[0], tries[0]];
-        const raw = await aiWords(tries, engine.aiMessages(questionForAi, shelf.pool, body.chat, r.order, !!body.voice), text => {
+        const raw = await aiWords(tries, engine.aiMessages(question, shelf.pool, body.chat, order, !!body.voice), text => {
           if (!firstAt) firstAt = performance.now() - t0;
           send({ type: "delta", text });
         }, {
@@ -197,7 +212,7 @@ Deno.serve(async req => {
             send({ type: "status", text: "Looking through the store..." });
           },
         });
-        const answer: any = engine.aiAnswer(raw, shelf.pool, questionForAi, r.likely);
+        const answer: any = engine.aiAnswer(raw, shelf.pool, questionForAi, likely, fromTop);
         if (r.note) answer.sub = r.note;
         const total = performance.now() - t0;
         send({ type: "answer", heard: q, ...answer, timing: { server_ms: Math.round(total), first_ms: Math.round(firstAt), route_ms: Math.round(dbMs), shelf_ms: Math.round(shelfMs), plan_ms: Math.round(planMs), retries, service: tries[retries].name } });

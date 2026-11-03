@@ -112,14 +112,14 @@ export async function aiWords(tries, messages, onText, { deadline, tryMs, stallM
 
 // The searches the AI wants run before it answers, from the first service to reply in time. `failed` says how many
 // didn't, so the answer needn't wait on a service that's just shown it's in trouble. No plan just means a smaller shelf.
-export async function aiPlan(services, messages, { tryMs, maxTokens = 120 }) {
+export async function aiPlan(services, messages, { tryMs, maxTokens = 160 }) {
   for (let i = 0; i < services.length; i++) {
     const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), tryMs[i]);
     try {
       const text = await services[i].json(messages, maxTokens, ctrl.signal);
       // Only DeepSeek has a JSON mode, so allow for a reply wrapped in a code fence.
       const plan = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1));
-      return { searches: Array.isArray(plan.searches) ? plan.searches : [], failed: i };
+      return { ...plan, searches: Array.isArray(plan.searches) ? plan.searches : [], failed: i };
     } catch (e) {
       console.warn("plan failed", services[i].name, String(e));
     } finally {
