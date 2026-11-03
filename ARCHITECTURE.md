@@ -19,7 +19,7 @@ flowchart LR
 2. **The server decides who answers.** The AI answers by default. The database answers directly only where there's one right answer and the AI can't beat it: an exact product word ("tent pegs"), a store fact, a shopping list or a starter kit. Where it can only do part of the job, it does that part and the AI judges the rest, with the plain answer kept in case the AI is unavailable:
    - **Rankings.** The database sorts ("cheapest fishing rod", "best tent under $200"), but it can't tell a fridge from a fridge organiser: 7 of 16 "cheapest" answers named an accessory. The AI picks from the sorted list.
    - **Likely mishearings and typos.** They go to the AI as a hint, like `i want a {tint:tent}`, to judge from the sentence and the conversation, so "anything even cheaper" doesn't become ovens.
-   - **Follow-ups** like "anything cheaper", because the next cheapest tent accessory isn't necessarily a tent peg.
+   - **Follow-ups** like "anything cheaper" or "too expensive", because the next cheapest tent accessory isn't necessarily a tent peg, and ones that narrow things down, like "any for kids" or "in black". The AI is told which product they're reacting to. Colours and sizes are rarely in a product's name, so it says when it can't see them.
 
    The server knows whether a question was spoken or typed. A typed word is only corrected when it's close in letters, however alike it sounds, and the AI is told which it was.
 3. **Rankings are computed, never guessed.** "Cheapest" is an SQL sort over every product in stock at that store, not a model's opinion.
@@ -70,7 +70,7 @@ Several shoppers at the same moment, everything except the AI call:
 8 real AI questions at once: first words median 1.85 s, slowest first words 2.44 s, slowest finished 2.96 s, 0 failed.
 <!-- latency:end -->
 
-Answers are checked by `node scripts/test_answers.mjs`: 583 checks against the deployed server, with the expected results worked out from the raw data independently of the server's logic.
+Answers are checked by `node scripts/test_answers.mjs`: 621 checks against the deployed server, with the expected results worked out from the raw data independently of the server's logic.
 
 Any product can be asked for by name. `node scripts/test_names.mjs` picks random products and asks for each one three ways. Over about 270 products, this is how often the product reached the shopper or the AI's shelf. The mishearing is simulated, copying what speech did on a real phone. Most of the misses are a near variant, like another size of the same thing.
 
