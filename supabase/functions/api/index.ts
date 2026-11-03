@@ -1,6 +1,7 @@
 // The one server endpoint the phone talks to. Questions arrive as a plain-text POST so the browser skips its
 // CORS preflight, and answers stream back as one JSON object per line. Holds the AI key; the phone never sees it.
 import { createEngine } from "./engine.mjs";
+import { SNAPSHOT } from "./snapshot.mjs";
 import { words } from "./text.mjs";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -21,7 +22,14 @@ const rpc = async (name: string, args: unknown) => {
     body: JSON.stringify(args),
   });
   if (!res.ok) throw new Error(`${name} ${res.status}: ${(await res.text()).slice(0, 300)}`);
-  return res.json();
+  // A database function that returns nothing comes back with an empty body.
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+};
+
+const inBackground = (job: Promise<unknown>) => {
+  // @ts-ignore EdgeRuntime exists on the host
+  if (typeof EdgeRuntime !== "undefined") EdgeRuntime.waitUntil(job);
 };
 
 const db = {
@@ -29,11 +37,13 @@ const db = {
   counts: (sets: unknown) => rpc("count_matches", { p_sets: sets }),
 };
 
-// The store layout hardly changes, so it's kept for a few minutes rather than fetched per question.
+// The word list and store layout change only with the catalogue. The host replaces a worker about every 75 seconds,
+// however busy it is, and fetching them cost each new worker about 0.4 s, paid by whichever shopper asked next. So a
+// new worker starts from the copy built into this function (scripts/make_snapshot.mjs), and the server's own ping
+// fetches the current one, when no shopper is waiting on it.
+const INFO_MAX_AGE_MS = 900000;
 let infoCache: any = null, infoAt = 0;
-async function loadInfo() {
-  if (infoCache && Date.now() - infoAt < 900000) return infoCache;
-  const [raw, wordRows] = await Promise.all([rpc("store_info", {}), rpc("all_words", {})]);
+function buildInfo(raw: any, wordRows: any[]) {
   raw.wordList = wordRows.map((w: any) => ({ v: w[0], df: w[1], head: w[2], cat: w[3], s: w[4], c: w[5] }));
   raw.words = new Map(raw.wordList.map((w: any) => [w.v, w]));
   raw.wordList = raw.wordList.filter((w: any) => w.v.length >= 3 && /^[a-z]+$/.test(w.v));
@@ -41,10 +51,21 @@ async function loadInfo() {
   // Neighbouring words in what the store calls its products, the test for a corrected phrase being a real thing.
   raw.pairs = new Set(raw.terms.flatMap((t: string) => words(t).map((w: string, i: number, all: string[]) => `${all[i - 1]} ${w}`).slice(1)));
   raw.storeName = (slug: string) => (raw.stores.find((s: any) => s.slug === slug) || { name: slug.replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) }).name;
-  infoCache = raw;
-  infoAt = Date.now();
   return raw;
 }
+async function refreshInfo() {
+  if (Date.now() - infoAt < INFO_MAX_AGE_MS) return;
+  infoAt = Date.now();
+  const [raw, wordRows] = await Promise.all([rpc("store_info", {}), rpc("all_words", {})]);
+  infoCache = buildInfo(raw, wordRows);
+}
+function loadInfo() {
+  if (!infoCache) infoCache = buildInfo(SNAPSHOT.info, SNAPSHOT.words);
+  return infoCache;
+}
+// Takes a small question the whole way through: the worker's code, its connection to the database and a database
+// connection. Whoever asks next finds them ready.
+const warmUp = (info: any) => createEngine(db, info, "brendale").route("tent pegs", { voice: false, ctx: null }).catch((e: unknown) => console.warn("warm failed", String(e)));
 
 const hits = new Map<string, number[]>();
 function tooMany(ip: string, limit: number) {
@@ -144,17 +165,26 @@ Deno.serve(async req => {
   } catch {
     return json({ error: "bad request" }, 400);
   }
-  // The server pings itself every minute, so the store layout and word list are ready before a shopper asks.
+  // The server's own timer, so a worker is often already up and connected when a shopper asks.
   if (body.action === "ping") {
-    await loadInfo();
+    await warmUp(loadInfo());
+    inBackground(refreshInfo().catch(e => console.warn("info refresh failed", String(e))));
     return json({ ok: true });
   }
   const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "unknown";
   // A dry run never reaches the AI, so it costs little and is counted apart: tests use it to check answers.
   if (body.dry ? tooMany(`dry ${ip}`, RATE_PER_MINUTE * 20) : tooMany(ip, RATE_PER_MINUTE)) return json({ error: "too many requests" }, 429);
 
-  const info = await loadInfo();
-  if (body.action === "init") return json({ aisles: info.aisles.map((a: any) => ({ n: a.n, dept: a.dept, label: a.label })), stores: info.stores });
+  const info = loadInfo();
+  // The page sends one of these when it opens and when a shopper touches the screen: a question is seconds away.
+  if (body.action === "warm") {
+    await warmUp(info);
+    return json({ ok: true });
+  }
+  if (body.action === "init") {
+    inBackground(warmUp(info));
+    return json({ aisles: info.aisles.map((a: any) => ({ n: a.n, dept: a.dept, label: a.label })), stores: info.stores });
+  }
   if (body.action === "report") {
     if (!REPORT_PASSWORD || body.password !== REPORT_PASSWORD) return json({ error: "wrong password" }, 401);
     return json(await rpc("question_report", { p_store: body.store || null, p_days: Math.max(1, Math.min(90, Math.round(+body.days) || 30)) }));
@@ -166,9 +196,7 @@ Deno.serve(async req => {
   const session = String(body.session || "").slice(0, 40);
   const log = (q: string, heard: string, route: string, answered: boolean, first: number, total: number) => {
     if (body.dry) return;
-    const job = rpc("log_question", { p_store: known, p_session: session, p_question: q, p_heard: heard, p_route: route, p_answered: answered, p_first_ms: Math.round(first), p_total_ms: Math.round(total) }).catch(e => console.warn("log failed", String(e)));
-    // @ts-ignore EdgeRuntime exists on the host
-    if (typeof EdgeRuntime !== "undefined") EdgeRuntime.waitUntil(job);
+    inBackground(rpc("log_question", { p_store: known, p_session: session, p_question: q, p_heard: heard, p_route: route, p_answered: answered, p_first_ms: Math.round(first), p_total_ms: Math.round(total) }).catch(e => console.warn("log failed", String(e))));
   };
 
   let q = String(body.q || "").trim().slice(0, 300);

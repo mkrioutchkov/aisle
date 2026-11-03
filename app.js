@@ -22,7 +22,18 @@
   // exchanges, for the AI. The server keeps nothing per shopper, so any server instance can answer.
   let ctx = null, aisles = null;
   const chat = [];
-  const post = body => fetch(API, { method: "POST", headers: { "content-type": "text/plain" }, body: JSON.stringify(body) });
+  let lastSent = 0;
+  const post = body => {
+    lastSent = Date.now();
+    return fetch(API, { method: "POST", headers: { "content-type": "text/plain" }, body: JSON.stringify(body) });
+  };
+  // Touching the screen means a question is seconds away, and after a quiet spell the whole way to the answer has gone
+  // cold: the phone's connection, the host's, the server's connection to the database. Waking it now means the question
+  // doesn't pay for it.
+  const WARM_AFTER_MS = 20000;
+  const warm = () => {
+    if (Date.now() - lastSent >= WARM_AFTER_MS) post({ action: "warm", dry: true }).catch(() => {});
+  };
   // A hiccup on the way to the server shouldn't cost the shopper an answer, so it's tried once more. The hosting
   // gateway turns requests away for about a second if a burst arrives together, and says so with a 429.
   const RETRY_MS = 400, BUSY_RETRY_MS = 1100;
@@ -285,6 +296,8 @@
   }
   $("#mic").addEventListener("click", listen);
   $("#bigMic").addEventListener("click", listen);
+  document.addEventListener("pointerdown", warm, { passive: true });
+  $("#q").addEventListener("focus", warm);
   $("#composer").addEventListener("submit", e => {
     e.preventDefault();
     const v = $("#q").value;

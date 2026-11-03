@@ -43,8 +43,10 @@ const GROUPS = [
 
 const rows = [];
 for (const [name, questions] of GROUPS) {
+  // Only the AI questions need to be real, so the rest stay out of the server's limit of 60 real questions a minute.
+  const extra = name.startsWith("AI") ? {} : { dry: true };
   const runs = [];
-  for (let round = 0; round < 2; round++) for (const q of questions) runs.push(await askOnce(q));
+  for (let round = 0; round < 2; round++) for (const q of questions) runs.push(await askOnce(q, extra));
   const bad = runs.filter(r => r.status !== 200).length;
   rows.push({ name, n: runs.length, routes: [...new Set(runs.map(r => r.route))].join(", "), first50: pct(runs.map(r => r.first), 0.5), first95: pct(runs.map(r => r.first), 0.95), total50: pct(runs.map(r => r.total), 0.5), worst: Math.max(...runs.map(r => r.total)), bad });
   console.log(name, rows[rows.length - 1]);
