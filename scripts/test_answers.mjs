@@ -214,6 +214,7 @@ for (const [q, match] of [
   ["tint", TENT], ["tints", TENT], ["camping tint", TENT], ["family tint", TENT], ["taunt", TENT], ["tent pigs", PEG], ["tint pegs", PEG], ["ten pegs", PEG], ["tentpegs", PEG],
   ["camping share", CHAIR], ["camping cheer", CHAIR], ["sleeping bug", BAG], ["sleeping back", BAG], ["sleepin bag", BAG], ["sleeping beg", BAG],
   ["fishing road", ROD], ["fishing rad", ROD], ["fishing rode", ROD], ["fishin rod", ROD], ["cheapest fishing road", ROD], ["best fishing rad", ROD],
+  ["facing road", ROD], ["can you find me facing road", ROD], ["facing rod", ROD], ["facing line", LINE], ["facing reel", REEL],
   ["swig", SWAG], ["swagg", SWAG], ["kyack", KAYAK], ["cayak", KAYAK], ["kayack", KAYAK], ["fishing kyack", KAYAK], ["coolar", COOLER], ["eski", COOLER], ["hard colour", COOLER],
   ["lanton", LANTERN], ["camping lantin", LANTERN], ["fishing lore", LURE], ["fishing real", REEL], ["spinning real", REEL], ["hiking boats", BOOT], ["hiking boat", BOOT],
   ["tackel box", TACKLE], ["tackle bocks", TACKLE], ["hed torch", HEAD], ["gas cannister", /\b(canister|cartridge|butane|gas)/i], ["bike helmut", /\bhelmets?\b/i], ["rain jackit", /\brain\b/i],
@@ -227,7 +228,7 @@ for (const [q, match] of [
   ok(top && parseInt((top.name.match(/(\d+)\s*-?\s*v?\s*person/i) || [])[1], 10) >= 4, `"for person tent" should mean 4 person: ${top?.name}`);
 }
 // Sounding like something isn't enough: these are real requests the store can't place, and only the AI can say so.
-for (const q of ["dog boots", "bear spray", "snow chains", "kayak hire", "gas bottle refill", "tent repair service", "rod repair", "bait freezer", "electric bike battery", "going camping in winter what sleeping bag do i need", "do you have size 10 hiking boots", "can i speak to someone"]) {
+for (const q of ["facing the road", "dog boots", "bear spray", "snow chains", "kayak hire", "gas bottle refill", "tent repair service", "rod repair", "bait freezer", "electric bike battery", "going camping in winter what sleeping bag do i need", "do you have size 10 hiking boots", "can i speak to someone"]) {
   const r = await ask(q, { voice: true });
   ok(r.ai && !/Showing/.test(r.note || ""), `${q}: should go to the AI as heard: ${r.say || r.note}`);
 }
@@ -241,6 +242,11 @@ for (const q of ["hi", "who are you", "what can you do"]) {
   const r = await ask(q);
   ok(r.ai && r.strong && !r.pool.length, `${q}: shouldn't search for anything: ${(r.pool || []).slice(0, 2).map(p => p.name)}`);
 }
+// An s for sh only counts when it makes a real product phrase, and never beats the usual correction.
+{
+  const r = await ask("beach shed", { voice: true });
+  ok(/shade/i.test(r.say || ""), `beach shed: should be beach shade: ${r.say || "(AI)"}`);
+}
 // Real words stay as they are, and small talk doesn't turn into a product.
 for (const [q, match] of [["road bike", /\b(road|bike)\b/i], ["reel", REEL], ["dog life jacket", /\bdog\b/i], ["boots", BOOT], ["boats", BOAT]]) {
   const r = await ask(q, { voice: true });
@@ -249,6 +255,10 @@ for (const [q, match] of [["road bike", /\b(road|bike)\b/i], ["reel", REEL], ["d
 for (const q of ["thanks", "cheers mate", "tell me a joke", "what's the weather today", "do you sell pizza"]) {
   const r = await ask(q, { voice: true });
   ok(!/^Showing /.test(r.sub || r.note || ""), `${q}: shouldn't be "corrected": ${r.sub || r.note}`);
+}
+for (const [q, wording] of [["pocket knife", /pocket knives/], ["first aid", /first aid in/]]) {
+  const r = await ask(q);
+  ok(wording.test(r.say || ""), `${q}: wording: ${r.say}`);
 }
 {
   const pick = async alts => { const res = await fetch(API, { method: "POST", headers: { "content-type": "text/plain" }, body: JSON.stringify({ q: alts[0], alts, store: "brendale", dry: true }) }); const a = JSON.parse((await res.text()).trim().split("\n").pop()); return a.heard; };

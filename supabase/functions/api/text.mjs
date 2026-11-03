@@ -102,6 +102,8 @@ export function sound(word) {
 }
 const CLASS = { b: "p", d: "t", g: "k", v: "f", j: "X", m: "n" };
 export const soundClass = s => s.replace(/[bdgvjm]/g, c => CLASS[c]);
+// It also swaps s and sh ("facing" for fishing), but that's too loose for the class stored with each word.
+export const unhushed = c => c.replace(/X/g, "s");
 
 // Things people say that aren't product words, so they never get "corrected" into one.
 export const SMALLTALK = new Set("thanks thank cheers yes yeah yep no nope sorry bye goodbye lol wow great nice cool awesome why when who joke funny love hate weather today tomorrow".split(" "));

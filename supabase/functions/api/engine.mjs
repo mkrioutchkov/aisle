@@ -3,7 +3,7 @@
 // memory (ctx, chat), so any server instance can answer any question.
 import {
   ADD_ONS, ADVICE_RE, CONCEPTS, HEAD, KITS, KIT_NOISE, KIT_RE, KIT_TOPIC, KIDS_RE, NUM, NUMW, REAL_RE, REL_SORT, SMALLTALK, STOP, STORE_RE, SYN, ZONE_OF,
-  RANK_ADVICE_RE, cap, lev, money, norm, parseAsk, sound, soundClass, stem, toks, where, words,
+  RANK_ADVICE_RE, cap, lev, money, norm, parseAsk, sound, soundClass, stem, toks, unhushed, where, words,
 } from "./text.mjs";
 
 const NOT_FOUND = "Hmm, I couldn't find that one. Try other words, or ask the team at the service desk (front right).";
@@ -56,7 +56,8 @@ export function createEngine(db, info, store) {
   }
   // "camping chair" reads and sounds better as "You'll find camping chairs in..."; leave brands and "x for y" alone.
   const plural = s => {
-    if (/(s|\d|ing)$/.test(s) || /\b(for|with|to|of)\b/.test(s)) return s;
+    if (/(s|\d|ing|\baid)$/.test(s) || /\b(for|with|to|of)\b/.test(s)) return s;
+    if (/knife$/.test(s)) return `${s.slice(0, -2)}ves`;
     if (/(ch|sh|x)$/.test(s)) return `${s}es`;
     if (/[^aeiou]y$/.test(s)) return `${s.slice(0, -1)}ies`;
     return `${s}s`;
@@ -89,6 +90,27 @@ export function createEngine(db, info, store) {
     return out.sort((a, b) => a.cost - b.cost).slice(0, 12);
   }
 
+  // Speech recognition also swaps s and sh: "facing road" for fishing rod. That's too loose to guess with, so it only
+  // counts when two words said side by side become something the store really calls a kind of product.
+  function hushedPhrase(lower, tokens) {
+    if (tokens.length !== 2 || !lower.includes(tokens.join(" "))) return null;
+    const heard = tokens.map(stem), classes = heard.map(w => soundClass(sound(w)));
+    const classOf = w => info.words.get(w)?.c ?? soundClass(sound(w));
+    let best = null;
+    for (const pair of info.pairs) {
+      const said = pair.split(" ");
+      if (!said.every((w, n) => unhushed(classOf(w)) === unhushed(classes[n]))) continue;
+      if (said.every((w, n) => classOf(w) === classes[n])) continue;
+      const d = lev(heard[0], said[0], 6) + lev(heard[1], said[1], 6);
+      if (!best || d < best.d) best = { said, d };
+    }
+    if (!best) return null;
+    const fixes = tokens.map((x, n) => ({ from: x, to: x.endsWith("s") && !best.said[n].endsWith("s") ? `${best.said[n]}s` : best.said[n] })).filter(f => f.from !== f.to);
+    let fixed = lower;
+    for (const f of fixes) fixed = fixed.replace(new RegExp(`\\b${f.from}\\b`), f.to);
+    return { text: fixed, fixes };
+  }
+
   // Fixes a misheard or mistyped word when the catalogue makes it clear what was meant, using the other
   // words as evidence: "fishing road" has no match but "fishing rod" does. Spoken input may also have
   // a real word that's the wrong one, so for voice even known words can change, but only if the
@@ -100,6 +122,7 @@ export function createEngine(db, info, store) {
     if (!tokens.length || tokens.length > 4) return none;
     const known = x => words(x).every(isKnown);
     const allKnown = tokens.every(known), multi = tokens.length > 1;
+    const hushed = () => (voice ? hushedPhrase(lower, tokens) : null);
     const countOf = async sets => db.counts(sets.map(t => words(t).map(altsOf)));
     const [asHeard] = allKnown ? await countOf([lower]) : [0];
     // Plenty of matches as heard means it was heard right.
@@ -136,7 +159,7 @@ export function createEngine(db, info, store) {
       for (const a of pool) opts.push({ to: x.endsWith("s") && !a.v.endsWith("s") ? `${a.v}s` : a.v, cost: 1 + a.cost });
       return opts.slice(0, 6);
     });
-    if (options.some(o => !o.length)) return none;
+    if (options.some(o => !o.length)) return hushed() || none;
     // Every reading, then the one that sounds closest AND makes the most sense of the catalogue: "fishing reel"
     // has hundreds of matches, "fishing real" one lure with Real in its name.
     const readings = [];
@@ -155,7 +178,7 @@ export function createEngine(db, info, store) {
       const score = r.cost - 1.2 * Math.log10(n);
       if (!best || score < best.score) best = { score, n, chosen: r.chosen };
     });
-    if (!best || (allKnown && best.n < Math.max(5, asHeard * 5))) return none;
+    if (!best || (allKnown && best.n < Math.max(5, asHeard * 5))) return hushed() || none;
     const fixes = tokens.map((x, n) => ({ from: x, to: best.chosen[n] })).filter(f => f.from !== f.to);
     if (!fixes.length) return none;
     let fixed = lower;
@@ -163,7 +186,7 @@ export function createEngine(db, info, store) {
     // A corrected phrase has to be something the store really calls a kind of product: "tent pegs", "fishing reel".
     // "snow chinos" for "snow chains" sounds right and finds something, but that's a guess, so the AI judges it.
     const said = words(best.chosen.join(" "));
-    if (multi && (said.length < 2 || !said.every((w, n) => !n || info.pairs.has(`${said[n - 1]} ${w}`)))) return { ...none, guess: fixed };
+    if (multi && (said.length < 2 || !said.every((w, n) => !n || info.pairs.has(`${said[n - 1]} ${w}`)))) return hushed() || { ...none, guess: fixed };
     return { text: fixed, fixes };
   }
 
@@ -481,7 +504,7 @@ export function createEngine(db, info, store) {
   async function fixedAnswer(heard, fix, opts) {
     let q = heard.toLowerCase();
     for (const f of fix.fixes) q = q.replace(new RegExp(`\\b${f.from}\\b`), f.to);
-    const note = fix.fixes.map(f => `Showing "${f.to}" for "${f.from}".`).join(" ");
+    const note = `Showing ${fix.fixes.map(f => `"${f.to}" for "${f.from}"`).join(" and ")}.`;
     const r = await answerOne(q, opts);
     if (!r.ai) r.sub = `${note} ${r.sub || ""}`.trim();
     else r.note = note;
