@@ -72,7 +72,7 @@ Several shoppers at the same moment, everything except the AI call:
 8 real AI questions at once: first words median 1.85 s, slowest first words 2.44 s, slowest finished 2.96 s, 0 failed.
 <!-- latency:end -->
 
-Answers are checked by `node scripts/test_answers.mjs`: 628 checks against the deployed server, with the expected results worked out from the raw data independently of the server's logic.
+Answers are checked by `node scripts/test_answers.mjs`: 632 checks against the deployed server, with the expected results worked out from the raw data independently of the server's logic.
 
 Any product can be asked for by name. `node scripts/test_names.mjs` picks random products and asks for each one three ways. Over about 270 products, this is how often the product reached the shopper or the AI's shelf. The mishearing is simulated, copying what speech did on a real phone. Most of the misses are a near variant, like another size of the same thing.
 
