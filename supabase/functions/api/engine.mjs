@@ -663,7 +663,7 @@ Recommend one product, or a second only if it's clearly different, like a cheape
 Only mention products that answer this question. If it isn't about products, don't add any.
 For "best" or "good", favour higher ratings with more reviews.
 Accessories (bags, covers, pegs, spare parts) aren't the product itself, so never offer one as a cheaper version of it. Don't suggest kids' products unless they ask.
-Don't recommend anything with stock 0. If they ask for one by name, say it's sold out and offer an in-stock alternative from the list.
+Don't recommend anything marked SOLD OUT. Only call a product sold out if its own line is marked SOLD OUT: if they ask by name for one of those, say so and offer an in-stock alternative from the list. Any other product is here, so tell them where it is.
 If nothing in the list fits, say you couldn't find it (not that the store doesn't sell it) and point them to the right aisle from the STORE GUIDE or the service desk. Never send them to another retailer.
 Questions often come from voice recognition, so a word may be misheard (tint for tent). Work out what they most likely meant, but take them at their word if what they said makes sense on its own: snow chains are not snow chinos, and if we don't have them, say you couldn't find them.
 You can't see their cart or fetch staff: if they want a person, the team is at the service desk. You don't know store hours, policies, price matching, or services like hire, repairs, refills and licences. Never say whether the store offers them or doesn't: the service desk can tell them. Offer a product as well only if it clearly helps.
@@ -677,7 +677,7 @@ ${services}`;
   }
 
   function aiMessages(q, pool, chat) {
-    const products = pool.map((p, i) => `${i + 1}. ${p.name} | ${money(p.price)} | Aisle ${p.aisle}, Bay ${p.bay} | stock ${p.stock}${p.rating ? ` | rated ${p.rating} (${p.reviews})` : ""}`).join("\n");
+    const products = pool.map((p, i) => `${i + 1}. ${p.name} | ${money(p.price)} | Aisle ${p.aisle}, Bay ${p.bay} | stock ${p.stock}${p.stock > 0 ? "" : " SOLD OUT"}${p.rating ? ` | rated ${p.rating} (${p.reviews})` : ""}`).join("\n");
     const messages = [{ role: "system", content: aiSystem() }];
     // The past answers keep a tag so the model doesn't copy a habit of leaving it off.
     for (const t of (chat || []).slice(-2)) messages.push({ role: "user", content: `QUESTION\n${String(t.q).slice(0, 300)}` }, { role: "assistant", content: `${String(t.say).slice(0, 400)} ${t.ok ? "[[1]]" : "[[]]"}` });
