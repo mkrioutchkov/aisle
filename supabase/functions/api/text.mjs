@@ -127,10 +127,11 @@ const AMT = "\\$?\\s*(\\d+(?:\\.\\d+)?)(k)?";
 const BUCKS = "(?:\\s*(?:bucks?|dollars?))?";
 const NOT_UNIT = "(?!\\s*(?:kg|g|l|lt|litres?|liters?|ft|feet|foot|m|cm|mm|in|inch|inches|person|people|kids?|years?|yrs?|degrees?|c|lumens?|cans?|pack|km|hp|watts?|w|v|wd)\\b)";
 const amt = (n, k) => parseFloat(n) * (k ? 1000 : 1);
+// A complaint about the price wants the cheapest of what they're looking at, not the dearest thing "expensive" would
+// otherwise ask for, and not just the next one down.
+const COMPLAINT = /(?<!\bnot )\b(?:(?:a )?(?:bit|little) )?too (?:expensive|dear|pricey|costly|much)\b|\b(?:a )?(?:bit|little) (?:expensive|dear|pricey|costly|much|steep)\b|\b(?:cant|cannot|can not) afford\b|\bover (?:my |the |our )?budget\b|\bout of (?:my |our )?(?:price )?(?:range|budget)\b|\bcosts? too much\b|\b(?:thats?|its|theyre|they are|these are|those are|this is) (?:pretty |quite |really |very |so )?(?:expensive|dear|pricey|costly|steep)\b/;
 const RELATIVE = [
   [/\b(cheaper|less expensive|lower price|lower priced|more affordable|less money|save (?:some )?money)\b/, "cheaper"],
-  // A complaint about the price wants something cheaper, not the dearest thing "expensive" would otherwise ask for.
-  [/(?<!\bnot )\b(?:(?:a )?(?:bit|little) )?too (?:expensive|dear|pricey|costly|much)\b|\b(?:a )?(?:bit|little) (?:expensive|dear|pricey|costly|much|steep)\b|\b(?:cant|cannot|can not) afford\b|\bover (?:my |the |our )?budget\b|\bout of (?:my |our )?(?:price )?(?:range|budget)\b|\bcosts? too much\b|\b(?:thats?|its|theyre|they are|these are|those are|this is) (?:pretty |quite |really |very |so )?(?:expensive|dear|pricey|costly|steep)\b/, "cheaper"],
   [/\b(more expensive|dearer|pricier|higher end|step up|fancier|nicer)\b/, "dearer"],
   [/\btoo (?:cheap|basic)\b/, "dearer"],
   [/\b(better quality|higher quality|better rated|higher rated|better)\b/, "better"],
@@ -190,7 +191,8 @@ export function parseAsk(q) {
   // A choice between things needs advice, not a ranking. Price ranges are already cut out by here.
   if (/\b(or|vs|versus|compare|difference|between)\b/.test(t)) a.ai = true;
   for (const [re, rel] of RELATIVE) if (cut(re, () => { a.rel = rel; })) break;
-  for (const [re, sort] of CUES) if (cut(re, () => { a.sort = sort; })) break;
+  if (cut(COMPLAINT, () => { a.sort = "price-asc"; a.complaint = true; })) { /* that's the order settled */ }
+  else for (const [re, sort] of CUES) if (cut(re, () => { a.sort = sort; })) break;
   a.rest = t.replace(/\s+/g, " ").trim();
   return a;
 }

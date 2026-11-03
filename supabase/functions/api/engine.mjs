@@ -240,7 +240,8 @@ export function createEngine(db, info, store) {
     // "daypack" counts as a pack.
     const endsInIt = p => { const last = toks(p.name).filter(t => !/\d/.test(t)).pop() || ""; return head.some(h => last.endsWith(h)); };
     const keep = new Set([...wide.rows.filter(endsInIt).slice(0, 12), ...wide.rows.filter(p => !endsInIt(p)).slice(0, 6)]);
-    return { ai: true, ranked: true, q, a, shelf: wide.rows.filter(p => keep.has(p)), order: ORDER[sort] || "", note: r.sub, fallback: { ...r, sub: "" } };
+    const shelf = wide.rows.filter(p => keep.has(p));
+    return { ai: true, ranked: true, q, a, shelf, likely: shelf.filter(endsInIt), order: ORDER[sort] || "", note: r.sub, fallback: { ...r, sub: "" } };
   }
 
   async function ranked(a, about, label, q, baseOpts = {}) {
@@ -594,6 +595,7 @@ export function createEngine(db, info, store) {
       rest = words(a.rest);
     }
     // Follow-ups: "got anything cheaper?", "something else".
+    if (a.complaint && !rest.length && !(ctx && ctx.top)) return { ai: true, q, a, noSearch: true };
     if (a.rel && !rest.length && ctx && ctx.top) {
       // After an AI answer the subject is what it recommended, not a search, so "cheaper" needs its judgement too.
       // The answer it follows may only have said where they are, so the AI needs telling what "these" means.
@@ -761,7 +763,7 @@ ${services}`;
     ];
   }
 
-  function aiAnswer(raw, pool, q) {
+  function aiAnswer(raw, pool, q, likely = []) {
     const text = raw.replace(/\[\[[^\]]*\]*/g, "").trim();
     // A tag only counts if the answer really talks about that product: its price, its place, or its name. Its name alone
     // won't do when the answer is that it couldn't find it. Once the answer quotes a price, only that price will do:
@@ -772,8 +774,10 @@ ${services}`;
     // If the tag went missing, spot the products by the price and location the answer quotes.
     if (!picks.length) picks = pool.filter(p => text.includes(money(p.price)) && text.includes(where(p))).slice(0, 3);
     const top = picks[0];
+    // A ranking shows what comes next on the list as well, after what the AI picked. Only the pick goes on the map.
+    const next = top ? likely.filter(p => pool.indexOf(p) > pool.indexOf(top) && !picks.includes(p)).slice(0, Math.max(0, 3 - picks.length)) : [];
     return {
-      route: "ai", say: text, sub: "", items: items(picks), marks: picks, ok: picks.length > 0,
+      route: "ai", say: text, sub: "", items: items([...picks, ...next]), marks: picks, ok: picks.length > 0,
       ctx: top ? { fromAi: true, about: "", cat: top.cat, label: top.cat.toLowerCase(), kidsOk: KIDS_RE.test(String(q).toLowerCase()), persons: null, top: { id: top.id, price: top.price, bayes: top.bayes, size: top.size ?? null, name: top.name, cat: top.cat }, shown: picks.map(p => p.id) } : null,
     };
   }

@@ -197,7 +197,7 @@ Deno.serve(async req => {
             send({ type: "status", text: "Looking through the store..." });
           },
         });
-        const answer: any = engine.aiAnswer(raw, shelf.pool, questionForAi);
+        const answer: any = engine.aiAnswer(raw, shelf.pool, questionForAi, r.likely);
         if (r.note) answer.sub = r.note;
         const total = performance.now() - t0;
         send({ type: "answer", heard: q, ...answer, timing: { server_ms: Math.round(total), first_ms: Math.round(firstAt), route_ms: Math.round(dbMs), shelf_ms: Math.round(shelfMs), plan_ms: Math.round(planMs), retries, service: tries[retries].name } });

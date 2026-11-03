@@ -394,11 +394,15 @@ for (const q of ["are the prices real", "is the stock real", "are these products
 // A complaint about the price wants something cheaper than what was just shown, never the dearest.
 {
   const shoes = await ask("shoes"), top = shoes.items[0].p;
+  const cheapestShoes = await ask("cheapest shoes");
   for (const q of ["are these are too expensive", "these are too expensive", "too expensive", "too dear", "thats a bit pricey", "that is a bit much", "i cant afford that", "out of my budget", "that costs too much"]) {
     const r = await ask(q, { voice: true, ctx: shoes.ctx });
-    ok(r.viaAi && /^cheaper than /.test(r.order || ""), `${q}: should ask for cheaper: ${r.route} ${r.order}`);
-    ok((r.pool || []).length && r.pool.every(p => +p.price < +top.price), `${q}: everything listed should be under ${top.price}: ${(r.pool || []).map(p => p.price)}`);
+    ok(r.viaAi && r.order === "cheapest first", `${q}: should be the cheapest first: ${r.route} ${r.order}`);
+    const prices = (r.pool || []).map(p => +p.price);
+    ok(prices.length && prices.every((p, i) => !i || prices[i - 1] <= p) && prices[0] === +cheapestShoes.pool[0].price, `${q}: should start from the cheapest shoes: ${prices.slice(0, 4)} vs ${cheapestShoes.pool[0].price}`);
   }
+  const noSubject = await ask("too expensive");
+  ok(noSubject.route === "ai" && !noSubject.viaAi && !(noSubject.pool || []).length, `too expensive, with nothing to compare, shouldn't name the cheapest thing in the store: ${noSubject.route} ${noSubject.say}`);
   // Following up with no product named stays on the same product, however it starts.
   const footwear = /shoe|boot|sock|slide|thong|sandal|footwear|crocs|gumboot/i;
   for (const q of ["yeah the cheapest", "yeah just what's the cheapest ones", "which ones are cheapest", "which is the cheapest", "the cheapest ones"]) {
