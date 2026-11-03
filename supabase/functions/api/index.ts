@@ -2,17 +2,25 @@
 // CORS preflight, and answers stream back as one JSON object per line. Holds the AI key; the phone never sees it.
 import { createEngine } from "./engine.mjs";
 import { SNAPSHOT } from "./snapshot.mjs";
-import { aiWords } from "./stream.mjs";
+import { aiPlan, aiWords, anthropic, deepseek } from "./stream.mjs";
 import { words } from "./text.mjs";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const AI_KEY = Deno.env.get("AISLE_AI_KEY") || "";
 const REPORT_PASSWORD = Deno.env.get("AISLE_REPORT_PASSWORD") || "";
-const AI_URL = "https://api.deepseek.com/chat/completions";
 const AI_MODEL = "deepseek-flash";
+// Optional: with an Anthropic key set as this secret, Claude takes over when DeepSeek stalls or refuses.
+const AI_BACKUP_KEY = Deno.env.get("AISLE_AI_BACKUP_KEY") || "";
+const AI_BACKUP_MODEL = "claude-haiku-5-5";
+const AI_SERVICES: any[] = [
+  AI_KEY && deepseek({ key: AI_KEY, model: AI_MODEL }),
+  AI_BACKUP_KEY && anthropic({ key: AI_BACKUP_KEY, model: AI_BACKUP_MODEL }),
+].filter(Boolean);
 const AI_DAILY_CAP = 3000;
-const AI_FIRST_WORD_MS = 7000, AI_TRY_MS = 3500, AI_STALL_MS = 2000, AI_TOTAL_MS = 12000, AI_TRIES = 2, PLAN_MS = 4000;
+const AI_FIRST_WORD_MS = 7000, AI_TRY_MS = 3500, AI_STALL_MS = 2000, AI_TOTAL_MS = 12000, AI_MAX_TOKENS = 200;
+// With a backup to turn to, DeepSeek gets less time to plan, so there's time left for the answer.
+const PLAN_MS = AI_SERVICES.length > 1 ? [2500, 2000] : [4000];
 const RATE_PER_MINUTE = 60;
 const ALLOWED = [/^https:\/\/mkrioutchkov\.github\.io$/, /^http:\/\/localhost(:\d+)?$/, /^http:\/\/127\.0\.0\.1(:\d+)?$/];
 
@@ -77,36 +85,6 @@ function tooMany(ip: string, limit: number) {
   if (hits.size > 5000) hits.clear();
   return list.length > limit;
 }
-
-async function aiPlan(messages: unknown) {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), PLAN_MS);
-  try {
-    const res = await fetch(AI_URL, {
-      method: "POST",
-      signal: ctrl.signal,
-      headers: { authorization: `Bearer ${AI_KEY}`, "content-type": "application/json" },
-      body: JSON.stringify({ model: AI_MODEL, thinking: { type: "disabled" }, response_format: { type: "json_object" }, max_tokens: 120, messages }),
-    });
-    if (!res.ok) throw new Error(String(res.status));
-    const data = await res.json();
-    const plan = JSON.parse(data.choices[0].message.content);
-    return Array.isArray(plan.searches) ? plan.searches : [];
-  } catch (e) {
-    console.warn("plan failed", String(e));
-    return [];
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-// Streams the AI's words as they arrive. stream.mjs has what happens when the service stalls.
-const aiStream = (messages: unknown, deadline: number, onText: (t: string) => void, onRetry: (e: unknown) => void) => aiWords((signal: AbortSignal) => fetch(AI_URL, {
-  method: "POST",
-  signal,
-  headers: { authorization: `Bearer ${AI_KEY}`, "content-type": "application/json" },
-  body: JSON.stringify({ model: AI_MODEL, thinking: { type: "disabled" }, stream: true, max_tokens: 200, messages }),
-}), onText, { deadline, tryMs: AI_TRY_MS, stallMs: AI_STALL_MS, totalMs: AI_TOTAL_MS, tries: AI_TRIES, onRetry });
 
 Deno.serve(async req => {
   const origin = req.headers.get("origin") || "";
@@ -190,32 +168,39 @@ Deno.serve(async req => {
       let firstAt = 0, planMs = 0, shelfMs = 0, retries = 0;
       try {
         const count = await rpc("bump_usage", { p_kind: "ai" });
-        if (!AI_KEY || count > AI_DAILY_CAP) throw new Error("AI cap");
+        if (!AI_SERVICES.length || count > AI_DAILY_CAP) throw new Error("AI cap");
         // Planning counts: if that used up the time, there's less left for the answer.
         const firstWordBy = performance.now() + AI_FIRST_WORD_MS;
         const shelfStart = performance.now();
+        let tries = AI_SERVICES;
         let shelf = r.noSearch ? { pool: [], strong: true } : await engine.shelf(questionForAi, r.a, body.ctx || null, r.guess);
         shelfMs = performance.now() - shelfStart;
         // Not sure which shelf this is about: let the AI decide what to search for first.
         if (!shelf.strong) {
           send({ type: "status", text: "Looking through the store..." });
           const planStart = performance.now();
-          const searches = await aiPlan(engine.planMessages(questionForAi));
-          shelf = { ...shelf, pool: await engine.planned(searches, shelf.pool) };
+          const plan = await aiPlan(AI_SERVICES, engine.planMessages(questionForAi), { tryMs: PLAN_MS });
+          // DeepSeek has just shown it's in trouble, so don't spend the time left waiting on it again.
+          if (plan.failed && AI_SERVICES.length > 1) tries = AI_SERVICES.slice(1);
+          shelf = { ...shelf, pool: await engine.planned(plan.searches, shelf.pool) };
           planMs = performance.now() - planStart;
         }
-        const raw = await aiStream(engine.aiMessages(questionForAi, shelf.pool, body.chat), firstWordBy, text => {
+        if (tries.length < 2) tries = [tries[0], tries[0]];
+        const raw = await aiWords(tries, engine.aiMessages(questionForAi, shelf.pool, body.chat), text => {
           if (!firstAt) firstAt = performance.now() - t0;
           send({ type: "delta", text });
-        }, e => {
-          retries++;
-          console.warn("AI retry", String(e));
-          send({ type: "status", text: "Looking through the store..." });
+        }, {
+          deadline: firstWordBy, tryMs: AI_TRY_MS, stallMs: AI_STALL_MS, totalMs: AI_TOTAL_MS, maxTokens: AI_MAX_TOKENS,
+          onRetry: (e: unknown) => {
+            retries++;
+            console.warn("AI retry", String(e));
+            send({ type: "status", text: "Looking through the store..." });
+          },
         });
         const answer: any = engine.aiAnswer(raw, shelf.pool, questionForAi);
         if (r.note) answer.sub = r.note;
         const total = performance.now() - t0;
-        send({ type: "answer", heard: q, ...answer, timing: { server_ms: Math.round(total), first_ms: Math.round(firstAt), route_ms: Math.round(dbMs), shelf_ms: Math.round(shelfMs), plan_ms: Math.round(planMs), retries } });
+        send({ type: "answer", heard: q, ...answer, timing: { server_ms: Math.round(total), first_ms: Math.round(firstAt), route_ms: Math.round(dbMs), shelf_ms: Math.round(shelfMs), plan_ms: Math.round(planMs), retries, service: tries[retries].name } });
         // A question about the store has no product to show, but it was still answered.
         log(asked, q, "ai", answer.ok || !!r.noSearch, firstAt, total);
       } catch (e) {
