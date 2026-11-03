@@ -14,6 +14,7 @@ const LEAD_IN = /^\s*(?:(?:hi|hey|gday|mate|ok|okay|alright|um|uh|so|well|yeah|r
 // printed 0.8 to 1, and ordinary questions rarely reach 0.5.
 const NAME_SURE = 0.5, NAME_EXACT = 0.8, NAME_SPREAD = 0.2;
 const RARE_WORD = 10;
+const ORDER = { "price-asc": "cheapest first", "price-desc": "dearest first", rating: "highest rated first", popular: "most reviewed first" };
 const BUYING_RE = /\b(sell|sells|stock|stocks|stocked|buy|buying|how much|prices?|costs?)\b/;
 
 export function createEngine(db, info, store) {
@@ -222,6 +223,19 @@ export function createEngine(db, info, store) {
   }
 
   // ---------- exact answers ----------
+  // The database can sort, but it can't tell a fridge from a fridge organiser: 7 of 16 "cheapest X" answers named an
+  // accessory. So the AI picks from the sorted list, with the plain answer ready in case it's unavailable. Names that end
+  // in what was asked for are likely the thing itself, so they get most of the room, but the very top of the list stays
+  // too, so "cheapest" stays honest.
+  async function rankedForAi(r, a, about, q, baseOpts, opts) {
+    if (opts.single || !/^Checked /.test(r.sub || "")) return r;
+    const sort = a.sort || (a.persons ? "fit" : "rating"), head = headOf(about) || [];
+    const wide = await find(about, { kidsOk: KIDS_RE.test(q.toLowerCase()), persons: a.persons || null, ...baseOpts, min: a.min, max: a.max, sort, limit: 120 });
+    const endsInIt = p => head.includes(toks(p.name).filter(t => !/\d/.test(t)).pop());
+    const keep = new Set([...wide.rows.filter(endsInIt).slice(0, 12), ...wide.rows.filter(p => !endsInIt(p)).slice(0, 6)]);
+    return { ai: true, ranked: true, q, a, shelf: wide.rows.filter(p => keep.has(p)), order: ORDER[sort] || "", note: r.sub, fallback: { ...r, sub: "" } };
+  }
+
   async function ranked(a, about, label, q, baseOpts = {}) {
     const sort = a.sort || (a.persons ? "fit" : "rating");
     const opts = { kidsOk: KIDS_RE.test(q.toLowerCase()), persons: a.persons || null, ...baseOpts };
@@ -499,6 +513,7 @@ export function createEngine(db, info, store) {
     if (allKnown || !content.length) {
       const r = await answerOne(heard, opts);
       r.asked = heard;
+      if (r.ranked) return r;
       // Words side by side in the top product's name weren't misheard: "jumper leads" aren't "snapper leads".
       const inName = !r.ai && r.items?.[0]?.p && ` ${toks(r.items[0].p.name).join(" ")} `.includes(` ${content.join(" ")} `);
       const few = !r.ai && !inName && r.count !== undefined && r.count < 20;
@@ -544,9 +559,19 @@ export function createEngine(db, info, store) {
     for (const f of fix.fixes) q = q.replace(new RegExp(`\\b${f.from}\\b`), f.to);
     const note = `Showing ${fix.fixes.map(f => `"${f.to}" for "${f.from}"`).join(" and ")}.`;
     const r = await answerOne(q, opts);
+    r.asked = q;
+    // Inside a list there's no AI to ask. Otherwise this is only a guess at what was said, so the AI judges it, with the
+    // corrected answer ready in case it's unavailable. Its shelf has what was heard as well as what it might have been,
+    // if the catalogue knows the word: a search with no known words just returns what's popular.
+    if (!opts.single) {
+      let hinted = heard;
+      for (const f of fix.fixes) hinted = hinted.replace(new RegExp(`\\b${f.from}\\b`, "i"), `{${f.from}:${f.to}}`);
+      const said = fix.fixes.map(f => f.from).filter(w => words(w).length && words(w).every(isKnown)).join(" ");
+      if (r.ai) return { ...r, q: hinted, a: { ...r.a, said } };
+      return { ai: true, q: hinted, a: { ...parseAsk(q), said }, asked: q, fallback: { ...r, sub: `${note} ${r.sub || ""}`.trim() } };
+    }
     if (!r.ai) r.sub = `${note} ${r.sub || ""}`.trim();
     else r.note = note;
-    r.asked = q;
     return r;
   }
 
@@ -572,11 +597,13 @@ export function createEngine(db, info, store) {
       // "and the most expensive?" is about what we were just discussing; "the most expensive thing you sell" isn't.
       const wholeStore = /\b(thing|item|product|store|shop|everything|overall)\b/.test(a.rest);
       if (!rest.length && ctx && !wholeStore) {
-        const r = await ranked(a, ctx.about || "", ctx.label, q, { cat: ctx.cat, kidsOk: ctx.kidsOk, persons: ctx.persons || a.persons });
-        if (r) return r;
+        const base = { cat: ctx.cat, kidsOk: ctx.kidsOk, persons: ctx.persons || a.persons };
+        const r = await ranked(a, ctx.about || "", ctx.label, q, base);
+        if (r) return rankedForAi(r, a, ctx.about || "", q, base, opts);
       } else if (!rest.length || rest.every(isKnown)) {
         const r = await ranked(a, a.rest, labelFor(a.rest), q);
-        if (r) return r;
+        // With no product named ("the most expensive thing you sell") there's no kind of thing to judge.
+        if (r) return rest.length ? rankedForAi(r, a, a.rest, q, {}, opts) : r;
       }
     }
     if (!a.sort && !a.limit && !a.persons && !a.rel && isExactLookup(q, a, opts.single)) {
@@ -623,7 +650,7 @@ export function createEngine(db, info, store) {
     // Two words that all match are a kind of thing ("fishing rod"), but three or more may be a product's name, which the
     // word search can hide behind what it filters out: "seaflo manual bilge pump" is an accessory.
     const nameSearch = !together || known.length > 2 ? named(q) : null;
-    const [found, guessed] = await Promise.all([Promise.all(jobs), guess ? find(guess, { kidsOk, sort: "rating", limit: 5 }) : null]);
+    const [found, guessed, asSaid] = await Promise.all([Promise.all(jobs), guess ? find(guess, { kidsOk, sort: "rating", limit: 5 }) : null, a.said ? find(a.said, { kidsOk, sort: "rating", limit: 4 }) : null]);
     const matched = together && found[0] && found[0].rows.length > 0;
     // Nothing has every word ("what size wetsuit", "is the coleman tent waterproof"): try the kind of product with
     // each other word, then the kind on its own.
@@ -641,11 +668,13 @@ export function createEngine(db, info, store) {
     // found plenty, only the name itself goes first. A close accessory or kids' product waits behind what they asked for
     // ("fishing rod" isn't the Fishing Rod Holder), but always keeps a place on the shelf.
     for (const p of byName) if (p.sim >= NAME_EXACT || (!matched && (p.sim >= NAME_SURE || (!p.acc && (kidsOk || !p.kids))))) add(p);
-    const room = 18 - byName.length;
+    const room = 18 - byName.length - (asSaid ? 4 : 0);
     if (guessed) for (const p of guessed.rows) if (p.stock > 0) add(p, room);
     for (const r of found) for (const p of r.rows) if (p.stock > 0 || matched) add(p, room);
     for (const r of partial) for (const p of r.rows) if (p.stock > 0) add(p, room);
     for (const p of byName) add(p);
+    // What was actually said, after what it might have meant, in case the correction is wrong.
+    if (asSaid) for (const p of asSaid.rows) if (p.stock > 0) add(p);
     if (ctx && ctx.top && !pool.length && !a.rel) { const r = await findFromCtx(ctx, { sort: "rating", limit: 6 }); r.rows.forEach(add); }
     // A product word in the question is enough to go on, and so is a follow-up: "cheaper" with nothing cheaper left
     // is still an answer. Only with neither does the AI plan its own search.
@@ -671,9 +700,11 @@ Use your general outdoor-gear knowledge to advise (like why down is warmer for i
 Recommend one product, or a second only if it's clearly different, like a cheaper option. Use a short name and say where it is, copying the aisle and bay exactly from that product's line. Say the price when it helps. Mention stock only if it's 3 or fewer or they ask.
 Only mention products that answer this question. If it isn't about products, don't add any.
 For "best" or "good", favour higher ratings with more reviews.
+If the PRODUCTS heading gives an order, it's true: answer with the first product that really is what they asked for, skipping accessories and parts for it.
 Accessories (bags, covers, pegs, spare parts) aren't the product itself, so never offer one as a cheaper version of it. Don't suggest kids' products unless they ask.
 Don't recommend anything marked SOLD OUT. Only call a product sold out if its own line is marked SOLD OUT: if they ask by name for one of those, say so and offer an in-stock alternative from the list. Any other product is here, so tell them where it is.
 If nothing in the list fits, say you couldn't find it (not that the store doesn't sell it) and point them to the right aisle from the STORE GUIDE or the service desk. Never send them to another retailer.
+A word in braces like {tint:tent} means we heard "tint" but it may be a slip for "tent". Decide from the sentence and the conversation which was meant: if what they said makes sense, take them at their word. Never mention the braces.
 Questions often come from voice recognition, so a word may be misheard (tint for tent). Work out what they most likely meant, but take them at their word if what they said makes sense on its own: snow chains are not snow chinos, and if we don't have them, say you couldn't find them.
 You can't see their cart or fetch staff: if they want a person, the team is at the service desk. You don't know store hours, policies, price matching, or services like hire, repairs, refills and licences. Never say whether the store offers them or doesn't: the service desk can tell them. Offer a product as well only if it clearly helps.
 If asked whether anything here is real, say this is a demo: the products and prices are real, the stock and locations are sample data.
@@ -685,12 +716,12 @@ ${guide}
 ${services}`;
   }
 
-  function aiMessages(q, pool, chat) {
+  function aiMessages(q, pool, chat, order = "") {
     const products = pool.map((p, i) => `${i + 1}. ${p.name} | ${money(p.price)} | Aisle ${p.aisle}, Bay ${p.bay} | stock ${p.stock}${p.stock > 0 ? "" : " SOLD OUT"}${p.rating ? ` | rated ${p.rating} (${p.reviews})` : ""}`).join("\n");
     const messages = [{ role: "system", content: aiSystem() }];
     // The past answers keep a tag so the model doesn't copy a habit of leaving it off.
     for (const t of (chat || []).slice(-2)) messages.push({ role: "user", content: `QUESTION\n${String(t.q).slice(0, 300)}` }, { role: "assistant", content: `${String(t.say).slice(0, 400)} ${t.ok ? "[[1]]" : "[[]]"}` });
-    messages.push({ role: "user", content: `PRODUCTS\n${products || "(none matched)"}\n\nQUESTION\n${String(q).slice(0, 300)}\n\nEnd with the [[numbers]].` });
+    messages.push({ role: "user", content: `PRODUCTS${order ? ` (${order})` : ""}\n${products || "(none matched)"}\n\nQUESTION\n${String(q).slice(0, 300)}\n\nEnd with the [[numbers]].` });
     return messages;
   }
 
@@ -704,10 +735,11 @@ ${services}`;
 
   function aiAnswer(raw, pool, q) {
     const text = raw.replace(/\[\[[^\]]*\]*/g, "").trim();
-    // A tag only counts if the answer really talks about that product: its price, its place, or its name, and its
-    // name alone won't do when the answer is that it couldn't find it.
+    // A tag only counts if the answer really talks about that product: its price, its place, or its name. Its name alone
+    // won't do when the answer is that it couldn't find it, or quotes a price for something else: "still the Ooni Koda at
+    // $529" tagged with an Ooni pizza peel.
     const said = new Set(toks(text)), denied = /\b(couldn.?t|can.?t|cannot|don.?t|didn.?t) (find|have|see|stock)\b/i.test(text);
-    const talksAbout = p => text.includes(money(p.price)) || text.includes(where(p)) || (!denied && toks(p.name).some(w => w.length > 2 && !STOP.has(w) && said.has(w)));
+    const talksAbout = p => text.includes(money(p.price)) || text.includes(where(p)) || (!denied && !/\$\d/.test(text) && toks(p.name).some(w => w.length > 2 && !STOP.has(w) && said.has(w)));
     let picks = (raw.match(/\[\[([\d,\s]*)\]\]/)?.[1].match(/\d+/g) || []).map(Number).map(n => pool[n - 1]).filter(p => p && talksAbout(p));
     // If the tag went missing, spot the products by the price and location the answer quotes.
     if (!picks.length) picks = pool.filter(p => text.includes(money(p.price)) && text.includes(where(p))).slice(0, 3);
@@ -719,7 +751,8 @@ ${services}`;
   }
 
   // What to show if the AI is unavailable: the closest plain search, or an honest "couldn't find it".
-  async function fallback(q, a, opts = {}) {
+  async function fallback(heard, a, opts = {}) {
+    const q = String(heard).replace(/\{[^:}]*:([^}]*)\}/g, "$1");
     // Two things asked for at once: searching for all the words together would find neither.
     const list = await listAnswer(q, { ...opts, partial: true }).catch(() => null);
     if (list) return list;

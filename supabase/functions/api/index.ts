@@ -158,8 +158,8 @@ Deno.serve(async req => {
   // Everything else goes to the AI, streamed so the first words show as soon as they exist.
   const questionForAi = r.q || q;
   if (body.dry) {
-    const s = r.noSearch ? { pool: [], strong: true } : await engine.shelf(questionForAi, r.a, body.ctx || null, r.guess);
-    return json({ type: "answer", route: "ai", dry: true, strong: s.strong, pool: s.pool, note: r.note || "", fallback: r.fallback || null, timing: { server_ms: Math.round(performance.now() - t0) } });
+    const s = r.noSearch ? { pool: [], strong: true } : r.shelf ? { pool: r.shelf, strong: true } : await engine.shelf(questionForAi, r.a, body.ctx || null, r.guess);
+    return json({ type: "answer", route: "ai", dry: true, q: questionForAi, order: r.order || "", strong: s.strong, pool: s.pool, note: r.note || "", fallback: r.fallback || null, timing: { server_ms: Math.round(performance.now() - t0) } });
   }
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -173,7 +173,7 @@ Deno.serve(async req => {
         const firstWordBy = performance.now() + AI_FIRST_WORD_MS;
         const shelfStart = performance.now();
         let tries = AI_SERVICES;
-        let shelf = r.noSearch ? { pool: [], strong: true } : await engine.shelf(questionForAi, r.a, body.ctx || null, r.guess);
+        let shelf = r.noSearch ? { pool: [], strong: true } : r.shelf ? { pool: r.shelf, strong: true } : await engine.shelf(questionForAi, r.a, body.ctx || null, r.guess);
         shelfMs = performance.now() - shelfStart;
         // Not sure which shelf this is about: let the AI decide what to search for first.
         if (!shelf.strong) {
@@ -186,7 +186,7 @@ Deno.serve(async req => {
           planMs = performance.now() - planStart;
         }
         if (tries.length < 2) tries = [tries[0], tries[0]];
-        const raw = await aiWords(tries, engine.aiMessages(questionForAi, shelf.pool, body.chat), text => {
+        const raw = await aiWords(tries, engine.aiMessages(questionForAi, shelf.pool, body.chat, r.order), text => {
           if (!firstAt) firstAt = performance.now() - t0;
           send({ type: "delta", text });
         }, {

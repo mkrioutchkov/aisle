@@ -40,6 +40,12 @@ async function ask(q, opts = {}) {
   if (!res.ok) throw new Error(`${q}: ${res.status} ${text.slice(0, 200)}`);
   const a = JSON.parse(text.trim().split("\n").pop());
   a.ai = a.route === "ai";
+  // Rankings and corrections go to the AI with the plain answer as its fallback. That answer is what these checks read,
+  // and the AI's sorted list starts with what it found.
+  if (a.ai && a.fallback?.items?.length) {
+    const sentAs = a.q, order = a.order, pool = a.pool;
+    Object.assign(a, a.fallback, { ai: false, viaAi: true, sentAs, order, pool });
+  }
   a.top = a.items?.[0]?.p ?? a.pool?.[0];
   if (verbose) console.log(`${opts.voice ? "[voice] " : ""}${q}\n   ${a.ai ? `(AI, ${a.strong ? "shelf" : "plan"}) ${(a.pool || []).slice(0, 2).map(p => p.name).join(" / ")}` : a.say} | ${a.sub || ""}`);
   return a;
@@ -352,6 +358,37 @@ for (const q of ["are the prices real", "is the stock real", "are these products
     const r = await ask(q);
     ok(re.test(r.say || r.top?.name || ""), `${q}: ${r.say || "(AI)"}`);
   }
+}
+
+// The AI judges rankings and corrections. It needs the real thing on its list, whatever sorts ahead of it.
+{
+  for (const [q, order, real] of [
+    ["cheapest pizza oven", "cheapest first", /Pizza Oven$/], ["cheapest backpack", "cheapest first", /Pack\b/], ["cheapest fridge", "cheapest first", /Fridge/],
+    ["cheapest chair", "cheapest first", /Chair$/], ["cheapest gazebo", "cheapest first", /Gazebo$/], ["dearest tent", "dearest first", /Tent/], ["best tent", "highest rated first", /Tent/],
+  ]) {
+    const r = await ask(q);
+    ok(r.viaAi && r.order === order, `${q}: should reach the AI (${order}): ${r.route} ${r.order}`);
+    ok((r.pool || []).length <= 18 && (r.pool || []).some(p => real.test(p.name)), `${q}: nothing real on its list: ${(r.pool || []).map(p => p.name).slice(0, 4)}`);
+    const prices = (r.pool || []).map(p => +p.price);
+    if (order === "cheapest first") ok(prices.every((p, i) => !i || prices[i - 1] <= p), `${q}: list isn't in price order`);
+    ok(r.top && r.say && /Checked all/.test(r.note || ""), `${q}: should keep the plain answer and its count: ${r.say} ${r.note}`);
+  }
+  for (const [q, sentAs] of [["i want a tint", "i want a {tint:tent}"], ["fishing real", "fishing {real:reel}"], ["facing road", "{facing:fishing} {road:rod}"]]) {
+    const r = await ask(q, { voice: true });
+    ok(r.viaAi && r.sentAs === sentAs, `${q}: should reach the AI as ${sentAs}: ${r.route} ${r.sentAs}`);
+    ok(/^Showing /.test(r.sub || ""), `${q}: its plain answer should say what it corrected: ${r.sub}`);
+  }
+  // In a list there's no AI to ask, so a correction there still goes straight through.
+  const list = await ask("a tint and a fishing rod", { voice: true });
+  ok(list.route === "list" && list.items.length === 2, `a tint and a fishing rod: ${list.route} ${list.say}`);
+  // Plain words stay direct, and so does a word that's now just filler.
+  for (const q of ["tent", "tent pegs", "head torch", "jumper", "do you sell boats"]) {
+    const r = await ask(q);
+    ok(r.route === "exact" && !r.viaAi, `${q}: should stay direct: ${r.route}`);
+  }
+  const rod = await ask("cheapest fishing rod");
+  const even = await ask("anything even cheaper", { ctx: rod.ctx });
+  ok(!/oven/i.test(`${even.say} ${even.sub} ${even.sentAs}`), `anything even cheaper: ${even.say || even.sentAs}`);
 }
 
 // Everyday words the catalogue doesn't use, where the word itself would find something unrelated: "jumper" is a brand

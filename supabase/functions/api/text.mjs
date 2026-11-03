@@ -44,7 +44,7 @@ export const norm = s => {
 };
 export const toks = s => norm(s).split(" ").filter(Boolean).map(stem);
 
-export const STOP = new Set(("a an the is are was were where wheres whats what which who how do does did you your yours have has had got get " +
+export const STOP = new Set(("a an the even is are was were where wheres whats what which who how do does did you your yours have has had got get " +
   "any anything i im ive id me my we our us need needs want wanna gonna looking look find finding show tell please can could would will " +
   "like in on of at to for from with and or about some there here store shop aisle bay sell selling buy buying kind sort type " +
   "one thing stuff hey hi hello mate um uh ok okay just also this that these those it its be keep kept located location guys yous " +
