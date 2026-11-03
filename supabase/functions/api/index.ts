@@ -2,6 +2,7 @@
 // CORS preflight, and answers stream back as one JSON object per line. Holds the AI key; the phone never sees it.
 import { createEngine } from "./engine.mjs";
 import { SNAPSHOT } from "./snapshot.mjs";
+import { aiWords } from "./stream.mjs";
 import { words } from "./text.mjs";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -11,7 +12,7 @@ const REPORT_PASSWORD = Deno.env.get("AISLE_REPORT_PASSWORD") || "";
 const AI_URL = "https://api.deepseek.com/chat/completions";
 const AI_MODEL = "deepseek-flash";
 const AI_DAILY_CAP = 3000;
-const AI_FIRST_WORD_MS = 6000, AI_TOTAL_MS = 12000, PLAN_MS = 4000;
+const AI_FIRST_WORD_MS = 7000, AI_TRY_MS = 3500, AI_STALL_MS = 2000, AI_TOTAL_MS = 12000, AI_TRIES = 2, PLAN_MS = 4000;
 const RATE_PER_MINUTE = 60;
 const ALLOWED = [/^https:\/\/mkrioutchkov\.github\.io$/, /^http:\/\/localhost(:\d+)?$/, /^http:\/\/127\.0\.0\.1(:\d+)?$/];
 
@@ -99,51 +100,13 @@ async function aiPlan(messages: unknown) {
   }
 }
 
-// Streams the AI's words as they arrive, leaving out the [[n]] product tag at the end. Returns the full text.
-async function aiStream(messages: unknown, onText: (t: string) => void) {
-  const ctrl = new AbortController();
-  let timer = setTimeout(() => ctrl.abort(), AI_FIRST_WORD_MS);
-  let raw = "", sent = 0, first = false;
-  try {
-    const res = await fetch(AI_URL, {
-      method: "POST",
-      signal: ctrl.signal,
-      headers: { authorization: `Bearer ${AI_KEY}`, "content-type": "application/json" },
-      body: JSON.stringify({ model: AI_MODEL, thinking: { type: "disabled" }, stream: true, max_tokens: 200, messages }),
-    });
-    if (!res.ok || !res.body) throw new Error(`AI ${res.status}`);
-    const rd = res.body.getReader(), dec = new TextDecoder();
-    let buf = "";
-    for (;;) {
-      const { done, value } = await rd.read();
-      if (done) break;
-      buf += dec.decode(value, { stream: true });
-      let nl;
-      while ((nl = buf.indexOf("\n")) >= 0) {
-        const line = buf.slice(0, nl).trim();
-        buf = buf.slice(nl + 1);
-        if (!line.startsWith("data:") || line === "data: [DONE]") continue;
-        const piece = JSON.parse(line.slice(5)).choices?.[0]?.delta?.content;
-        if (!piece) continue;
-        if (!first) {
-          first = true;
-          clearTimeout(timer);
-          timer = setTimeout(() => ctrl.abort(), AI_TOTAL_MS);
-        }
-        raw += piece;
-        const cut = raw.indexOf("[");
-        const visible = cut < 0 ? raw : raw.slice(0, cut);
-        if (visible.length > sent) {
-          onText(visible.slice(sent));
-          sent = visible.length;
-        }
-      }
-    }
-    return raw;
-  } finally {
-    clearTimeout(timer);
-  }
-}
+// Streams the AI's words as they arrive. stream.mjs has what happens when the service stalls.
+const aiStream = (messages: unknown, deadline: number, onText: (t: string) => void, onRetry: (e: unknown) => void) => aiWords((signal: AbortSignal) => fetch(AI_URL, {
+  method: "POST",
+  signal,
+  headers: { authorization: `Bearer ${AI_KEY}`, "content-type": "application/json" },
+  body: JSON.stringify({ model: AI_MODEL, thinking: { type: "disabled" }, stream: true, max_tokens: 200, messages }),
+}), onText, { deadline, tryMs: AI_TRY_MS, stallMs: AI_STALL_MS, totalMs: AI_TOTAL_MS, tries: AI_TRIES, onRetry });
 
 Deno.serve(async req => {
   const origin = req.headers.get("origin") || "";
@@ -224,10 +187,12 @@ Deno.serve(async req => {
   const stream = new ReadableStream({
     async start(controller) {
       const send = (obj: unknown) => controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n"));
-      let firstAt = 0, planMs = 0, shelfMs = 0;
+      let firstAt = 0, planMs = 0, shelfMs = 0, retries = 0;
       try {
         const count = await rpc("bump_usage", { p_kind: "ai" });
         if (!AI_KEY || count > AI_DAILY_CAP) throw new Error("AI cap");
+        // Planning counts: if that used up the time, there's less left for the answer.
+        const firstWordBy = performance.now() + AI_FIRST_WORD_MS;
         const shelfStart = performance.now();
         let shelf = r.noSearch ? { pool: [], strong: true } : await engine.shelf(questionForAi, r.a, body.ctx || null, r.guess);
         shelfMs = performance.now() - shelfStart;
@@ -239,23 +204,26 @@ Deno.serve(async req => {
           shelf = { ...shelf, pool: await engine.planned(searches, shelf.pool) };
           planMs = performance.now() - planStart;
         }
-        const raw = await aiStream(engine.aiMessages(questionForAi, shelf.pool, body.chat), text => {
+        const raw = await aiStream(engine.aiMessages(questionForAi, shelf.pool, body.chat), firstWordBy, text => {
           if (!firstAt) firstAt = performance.now() - t0;
           send({ type: "delta", text });
+        }, e => {
+          retries++;
+          console.warn("AI retry", String(e));
+          send({ type: "status", text: "Looking through the store..." });
         });
-        if (!raw.trim()) throw new Error("empty AI answer");
         const answer: any = engine.aiAnswer(raw, shelf.pool, questionForAi);
         if (r.note) answer.sub = r.note;
         const total = performance.now() - t0;
-        send({ type: "answer", heard: q, ...answer, timing: { server_ms: Math.round(total), first_ms: Math.round(firstAt), route_ms: Math.round(dbMs), shelf_ms: Math.round(shelfMs), plan_ms: Math.round(planMs) } });
+        send({ type: "answer", heard: q, ...answer, timing: { server_ms: Math.round(total), first_ms: Math.round(firstAt), route_ms: Math.round(dbMs), shelf_ms: Math.round(shelfMs), plan_ms: Math.round(planMs), retries } });
         // A question about the store has no product to show, but it was still answered.
         log(asked, q, "ai", answer.ok || !!r.noSearch, firstAt, total);
       } catch (e) {
         console.warn("AI unavailable", String(e));
-        const answer: any = r.fallback || await engine.fallback(questionForAi, r.a).catch(() => ({ route: "none", say: "Sorry, I can't reach the store system right now. The team at the service desk can help.", sub: "", items: [], marks: [], ok: false }));
+        const answer: any = r.fallback || await engine.fallback(questionForAi, r.a, { voice: !!body.voice }).catch(() => ({ route: "none", say: "Sorry, I can't reach the store system right now. The team at the service desk can help.", sub: "", items: [], marks: [], ok: false }));
         if (r.note) answer.sub = `${r.note} ${answer.sub || ""}`.trim();
         const total = performance.now() - t0;
-        send({ type: "answer", heard: q, ...answer, timing: { server_ms: Math.round(total), ai_failed: true } });
+        send({ type: "answer", heard: q, ...answer, timing: { server_ms: Math.round(total), ai_failed: true, retries } });
         log(asked, q, answer.route || "none", !!answer.ok, total, total);
       }
       controller.close();

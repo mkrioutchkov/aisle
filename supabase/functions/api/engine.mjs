@@ -446,6 +446,11 @@ export function createEngine(db, info, store) {
       if (/^Showing /.test(r.sub || "")) notes.push(r.sub.split(/(?<=\.)\s/)[0]);
       rows.push({ p, label: cap(labelFor(parseAsk(r.asked || parts[i]).rest) || parts[i]) });
     });
+    // With no AI to make sense of the rest, answer the part we can find and say what we couldn't.
+    if (opts.partial && rows.length === 1) {
+      const found = answers.find(r => r && !r.ai && r.ok && r.items && r.items[0]);
+      return { ...found, route: "list", say: `${found.say} I couldn't find ${missing.join(" or ")}.` };
+    }
     if (rows.length < 2) return null;
     rows.sort((x, y) => x.p.aisle - y.p.aisle || x.p.bay - y.p.bay);
     const stops = rows.map(r => `${r.label.toLowerCase()} in Aisle ${r.p.aisle}`);
@@ -710,8 +715,11 @@ ${services}`;
   }
 
   // What to show if the AI is unavailable: the closest plain search, or an honest "couldn't find it".
-  async function fallback(q, a) {
-    const about = words(a.rest).filter(isKnown).join(" ");
+  async function fallback(q, a, opts = {}) {
+    // Two things asked for at once: searching for all the words together would find neither.
+    const list = await listAnswer(q, { ...opts, partial: true }).catch(() => null);
+    if (list) return list;
+    const known = words(a.rest).filter(isKnown), about = known.join(" ");
     if (about) {
       const r = await plainAnswer(q, about);
       if (r) return r;
@@ -719,6 +727,16 @@ ${services}`;
     const [top] = await named(q);
     if (top?.sim >= NAME_SURE) {
       return { route: "exact", say: `The ${top.name} is ${money(top.price)}, ${where(top)}.`, sub: top.stock > 0 ? `${top.stock} in stock.` : "Sold out here right now.", items: items([top]), marks: [top], ok: true, ctx: ctxFor(top.name, top, top.cat.toLowerCase(), {}, q) };
+    }
+    // Nothing has all the words, but some of them might do: "warm jumper", "sleeping bag for winter". It says it's only
+    // the closest, because "snow chains" will find nothing better than snow pants.
+    const some = known.slice(0, 6), kidsOk = KIDS_RE.test(q.toLowerCase());
+    for (let size = some.length - 1; size > 0; size--) {
+      const found = await Promise.all(some.slice(0, some.length - size + 1).map((_, i) => find(some.slice(i, i + size).join(" "), { kidsOk, limit: 12 })));
+      const best = found.filter(r => r.rows.some(p => p.stock > 0)).sort((x, y) => y.count - x.count)[0];
+      if (!best) continue;
+      const rows = best.rows.filter(p => p.stock > 0);
+      return { route: "none", say: `I couldn't find exactly that. The closest is the ${rows[0].name}, ${where(rows[0])}.`, sub: "", items: items(rows), marks: [rows[0]], ok: false };
     }
     return { route: "none", say: NOT_FOUND, sub: "", items: [], marks: [], zone: "service", ok: false };
   }
