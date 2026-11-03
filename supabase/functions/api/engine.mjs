@@ -236,7 +236,8 @@ export function createEngine(db, info, store) {
     if (opts.single || !/^Checked /.test(r.sub || "")) return r;
     const sort = a.sort || (a.persons ? "fit" : "rating"), head = headOf(about) || [];
     const wide = await find(about, { kidsOk: KIDS_RE.test(q.toLowerCase()), persons: a.persons || null, ...baseOpts, min: a.min, max: a.max, sort, limit: 120 });
-    const endsInIt = p => head.includes(toks(p.name).filter(t => !/\d/.test(t)).pop());
+    // "daypack" counts as a pack.
+    const endsInIt = p => { const last = toks(p.name).filter(t => !/\d/.test(t)).pop() || ""; return head.some(h => last.endsWith(h)); };
     const keep = new Set([...wide.rows.filter(endsInIt).slice(0, 12), ...wide.rows.filter(p => !endsInIt(p)).slice(0, 6)]);
     return { ai: true, ranked: true, q, a, shelf: wide.rows.filter(p => keep.has(p)), order: ORDER[sort] || "", note: r.sub, fallback: { ...r, sub: "" } };
   }
@@ -587,7 +588,8 @@ export function createEngine(db, info, store) {
       // After an AI answer the subject is what it recommended, not a search, so "cheaper" needs its judgement too.
       if (ctx.fromAi) return { ai: true, q, a };
       const r = await relative(a.rel, ctx);
-      if (r) return r;
+      // "anything cheaper" after tent pegs shouldn't offer floor mats just because they're tent accessories too.
+      if (r) return opts.single ? r : { ai: true, q, a, fallback: r };
     }
     if (a.rel && rest.length && !a.sort) a.sort = REL_SORT[a.rel] || null;
 
@@ -705,6 +707,7 @@ Use your general outdoor-gear knowledge to advise (like why down is warmer for i
 Recommend one product, or a second only if it's clearly different, like a cheaper option. Use a short name and say where it is, copying the aisle and bay exactly from that product's line. Say the price when it helps. Mention stock only if it's 3 or fewer or they ask.
 Only mention products that answer this question. If it isn't about products, don't add any.
 For "best" or "good", favour higher ratings with more reviews.
+If they ask for something cheaper, better or bigger than what you last named and nothing listed really is, say what you named is already the cheapest, best or biggest we have.
 If the PRODUCTS heading gives an order, it's true: answer with the first product that really is what they asked for, skipping accessories and parts for it.
 Accessories (bags, covers, pegs, spare parts) aren't the product itself, so never offer one as a cheaper version of it. Don't suggest kids' products unless they ask.
 Don't recommend anything marked SOLD OUT. Only call a product sold out if its own line is marked SOLD OUT: if they ask by name for one of those, say so and offer an in-stock alternative from the list. Any other product is here, so tell them where it is.
@@ -723,10 +726,11 @@ ${services}`;
 
   function aiMessages(q, pool, chat, order = "", spoken = false) {
     const products = pool.map((p, i) => `${i + 1}. ${p.name} | ${money(p.price)} | Aisle ${p.aisle}, Bay ${p.bay} | stock ${p.stock}${p.stock > 0 ? "" : " SOLD OUT"}${p.rating ? ` | rated ${p.rating} (${p.reviews})` : ""}`).join("\n");
+    const nothing = /\b(cheaper|better|bigger|smaller|dearer)\b/i.exec(q);
     const messages = [{ role: "system", content: aiSystem() }];
     // The past answers keep a tag so the model doesn't copy a habit of leaving it off.
     for (const t of (chat || []).slice(-2)) messages.push({ role: "user", content: `QUESTION\n${String(t.q).slice(0, 300)}` }, { role: "assistant", content: `${String(t.say).slice(0, 400)} ${t.ok ? "[[1]]" : "[[]]"}` });
-    messages.push({ role: "user", content: `PRODUCTS${order ? ` (${order})` : ""}\n${products || "(none matched)"}\n\nQUESTION (${spoken ? "spoken" : "typed"})\n${String(q).slice(0, 300)}\n\nEnd with the [[numbers]].` });
+    messages.push({ role: "user", content: `PRODUCTS${order ? ` (${order})` : ""}\n${products || (nothing ? `(nothing is ${nothing[1].toLowerCase()} than what you last named)` : "(none matched)")}\n\nQUESTION (${spoken ? "spoken" : "typed"})\n${String(q).slice(0, 300)}\n\nEnd with the [[numbers]].` });
     return messages;
   }
 
@@ -741,10 +745,10 @@ ${services}`;
   function aiAnswer(raw, pool, q) {
     const text = raw.replace(/\[\[[^\]]*\]*/g, "").trim();
     // A tag only counts if the answer really talks about that product: its price, its place, or its name. Its name alone
-    // won't do when the answer is that it couldn't find it, or quotes a price for something else: "still the Ooni Koda at
-    // $529" tagged with an Ooni pizza peel.
+    // won't do when the answer is that it couldn't find it. Once the answer quotes a price, only that price will do:
+    // "still the Ooni Koda, $529, Aisle 4, Bay 12" tagged with a pizza peel from the same bay.
     const said = new Set(toks(text)), denied = /\b(couldn.?t|can.?t|cannot|don.?t|didn.?t) (find|have|see|stock)\b/i.test(text);
-    const talksAbout = p => text.includes(money(p.price)) || text.includes(where(p)) || (!denied && !/\$\d/.test(text) && toks(p.name).some(w => w.length > 2 && !STOP.has(w) && said.has(w)));
+    const talksAbout = p => text.includes(money(p.price)) || (!/\$\d/.test(text) && (text.includes(where(p)) || (!denied && toks(p.name).some(w => w.length > 2 && !STOP.has(w) && said.has(w)))));
     let picks = (raw.match(/\[\[([\d,\s]*)\]\]/)?.[1].match(/\d+/g) || []).map(Number).map(n => pool[n - 1]).filter(p => p && talksAbout(p));
     // If the tag went missing, spot the products by the price and location the answer quotes.
     if (!picks.length) picks = pool.filter(p => text.includes(money(p.price)) && text.includes(where(p))).slice(0, 3);

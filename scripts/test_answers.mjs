@@ -42,7 +42,7 @@ async function ask(q, opts = {}) {
   a.ai = a.route === "ai";
   // Rankings and corrections go to the AI with the plain answer as its fallback. That answer is what these checks read,
   // and the AI's sorted list starts with what it found.
-  if (a.ai && a.fallback?.items?.length) {
+  if (a.ai && (a.fallback?.items?.length || a.fallback?.route === "exact")) {
     const sentAs = a.q, order = a.order, pool = a.pool;
     Object.assign(a, a.fallback, { ai: false, viaAi: true, sentAs, order, pool });
   }
