@@ -354,6 +354,21 @@ for (const q of ["are the prices real", "is the stock real", "are these products
   }
 }
 
+// Everyday words the catalogue doesn't use, where the word itself would find something unrelated: "jumper" is a brand
+// of lure and "swimmers" a Daiwa reel. Then the real names those rules must leave alone.
+for (const [q, re] of [
+  ["jumper", /pullover|fleece|hoodie|sweater/i], ["i want a jumper", /pullover|fleece|hoodie|sweater/i], ["mens jumper", /pullover|fleece|hoodie|sweater/i],
+  ["swimmers", /swim|surf/i], ["togs", /swim|surf/i], ["bathers", /swim|surf/i], ["boardies", /board short/i],
+  ["mozzie spray", /repell/i], ["bug spray", /repell/i], ["pegs", /\bpegs?\b/i], ["i need some pegs", /\bpegs?\b/i],
+  ["jumper leads", /jumper leads/i], ["stump jumper", /stumpjumper/i], ["free swimmer", /free swimmer/i], ["sand pegs", /sand peg/i], ["swim goggles", /goggle/i],
+]) {
+  for (const voice of [false, true]) {
+    const r = await ask(q, { voice });
+    const tops = (r.items || []).slice(0, 3).map(i => i.p);
+    ok(tops.length && tops.every(p => re.test(`${p.name} ${p.cat}`)), `${q}${voice ? " (voice)" : ""}: ${tops.map(p => p.name)}`);
+  }
+}
+
 const sorted = [...stamps].sort((a, b) => a - b);
 const pct = p => sorted[Math.floor(sorted.length * p)].toFixed(0);
 console.log(`\n${DB.length} products | ${calls} requests to the live server | median ${pct(0.5)}ms, 95th ${pct(0.95)}ms, slowest ${slowest.toFixed(0)}ms from this PC`);

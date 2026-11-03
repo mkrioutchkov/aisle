@@ -16,9 +16,15 @@ const PHRASES = [
   [/\bback ?packs?\b/g, "backpack"],
   [/\bsun ?glasses\b/g, "sunglasses"],
   [/\bwet ?suits?\b/g, "wetsuit"],
+  // What shoppers call things the catalogue names differently, where the word itself would find something unrelated:
+  // "jumper" is a brand of lure and "swimmers" a Daiwa reel. Those real names stay as they are.
+  [/(?<!stump )\bjumpers?\b(?! leads?| cables?)/g, "pullover"],
+  [/\bboardies\b/g, "board shorts"],
+  [/(?<!free )\bswimmers\b|\b(togs|bathers|cossies?|cozzies?|swimming costumes?|bathing suits?)\b/g, "swimwear"],
+  [/\b(mozzie|mosquito|insect|bug|fly) sprays?\b/g, "insect repellent"],
 ];
 // Most product names contain none of these, so they skip the phrase rules entirely.
-const PHRASE_HINT = /head|air|chilly|esk|ice|flip|life|paddle|sup|sleeping|rain|blow|people|person|back|sun|wet/;
+const PHRASE_HINT = /head|air|chilly|esk|ice|flip|life|paddle|sup|sleeping|rain|blow|people|person|back|sun|wet|jumper|boardies|swim|togs|bathers|coss|cozz|bathing|spray/;
 const KEEP = new Set(["gas", "plus", "lens", "canvas", "series", "thermos", "bass", "cross", "glass"]);
 
 export const stem = w => {
@@ -46,6 +52,9 @@ export const STOP = new Set(("a an the is are was were where wheres whats what w
   "recommend suggest something item should bring take start starting use using try trying think know see put make " +
   "gday ill give gimme after chasing actually alright already again always anyway around across ahead help reckon maybe hope hoping chance fetch point").split(/\s+/));
 
+// A word that means something narrower when it's all that was asked. Real pegs are tent accessories, so "pegs" alone
+// would find a peg hammer first.
+export const ALONE = { peg: "tent pegs" };
 export const SYN = {
   torch: "torch|flashlight", flashlight: "torch", peg: "peg|stake", stake: "peg",
   mattress: "mattress|airbed|mat", mat: "mat|mattress", airbed: "airbed|mattress",

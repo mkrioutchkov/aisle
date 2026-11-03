@@ -2,7 +2,7 @@
 // the store layout: the catalogue and live stock stay in Postgres, and the phone carries the short conversation
 // memory (ctx, chat), so any server instance can answer any question.
 import {
-  ADD_ONS, ADVICE_RE, CONCEPTS, HEAD, KITS, KIT_NOISE, KIT_RE, KIT_TOPIC, KIDS_RE, NUM, NUMW, REAL_RE, REL_SORT, SMALLTALK, STOP, STORE_RE, SYN, ZONE_OF,
+  ADD_ONS, ADVICE_RE, ALONE, CONCEPTS, HEAD, KITS, KIT_NOISE, KIT_RE, KIT_TOPIC, KIDS_RE, NUM, NUMW, REAL_RE, REL_SORT, SMALLTALK, STOP, STORE_RE, SYN, ZONE_OF,
   RANK_ADVICE_RE, cap, lev, money, norm, parseAsk, sound, soundClass, stem, toks, unhushed, where, words,
 } from "./text.mjs";
 
@@ -77,7 +77,7 @@ export function createEngine(db, info, store) {
   }
   // "camping chair" reads and sounds better as "You'll find camping chairs in..."; leave brands and "x for y" alone.
   const plural = s => {
-    if (/(s|\d|ing|\baid|paper)$/.test(s) || /\b(for|with|to|of)\b/.test(s)) return s;
+    if (/(s|\d|ing|\baid|paper|wear)$/.test(s) || /\b(for|with|to|of)\b/.test(s)) return s;
     if (/knife$/.test(s)) return `${s.slice(0, -2)}ves`;
     if (/(ch|sh|x)$/.test(s)) return `${s}es`;
     if (/[^aeiou]y$/.test(s)) return `${s.slice(0, -1)}ies`;
@@ -486,6 +486,8 @@ export function createEngine(db, info, store) {
     if (said.length && said.every(w => SMALLTALK.has(w) || SMALLTALK.has(`${w}s`))) return { ai: true, q: heard, a: parseAsk(heard), pool: [], noSearch: true, fallback: { route: "fact", say: "No worries. What else are you after?", sub: "", items: [], marks: [], ok: true } };
 
     const first = parseAsk(heard), content = words(first.rest), lower = heard.toLowerCase().replace(/['’]/g, "");
+    const alone = ALONE[content.join(" ")];
+    if (alone) return routeOne(heard.toLowerCase().replace(new RegExp(`\\b${content[0]}s?\\b`), alone), opts);
     const allKnown = content.length > 0 && content.every(isKnown);
     const correctable = !first.ai && !ADVICE_RE.test(qnHeard);
     // "the kayaks and the life jackets" clearly says two things.
@@ -497,7 +499,9 @@ export function createEngine(db, info, store) {
     if (allKnown || !content.length) {
       const r = await answerOne(heard, opts);
       r.asked = heard;
-      const few = !r.ai && r.count !== undefined && r.count < 20;
+      // Words side by side in the top product's name weren't misheard: "jumper leads" aren't "snapper leads".
+      const inName = !r.ai && r.items?.[0]?.p && ` ${toks(r.items[0].p.name).join(" ")} `.includes(` ${content.join(" ")} `);
+      const few = !r.ai && !inName && r.count !== undefined && r.count < 20;
       // "rod and reel combo" is one thing because several products match all of it; "tents and sleeping bags" isn't.
       if (!opts.single && (r.ai || (few && r.count < 3)) && /\band\b/.test(lower)) {
         const list = await listAnswer(heard, opts);
