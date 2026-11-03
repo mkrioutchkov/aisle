@@ -21,6 +21,8 @@ flowchart LR
    - **Likely mishearings and typos.** They go to the AI as a hint, like `i want a {tint:tent}`, to judge from the sentence and the conversation, so "anything even cheaper" doesn't become ovens.
    - **Follow-ups.** Mid-conversation, anything that doesn't name a kind of product, judged from the store's own categories, goes to the AI with the conversation: "these are two expensive", "any for kids", "in black", "is it any good". No list of phrases can keep up with how people talk or how speech bends it. The AI says what they mean, whether it's the same thing, any new detail, and what they want done about price or quality, and the server searches using the shopper's own words. That's a second AI call, so these take about 2 to 3 s. Colours and sizes are rarely in a product's name, so it says when it can't see them.
 
+   - **Several kinds of product named.** It could be a shopping list, a choice or one thing for another, so the AI says which. Speech drops the joins in lists, so "i want a tent tent pegs and some shoes" comes back as three items, and the server builds the usual walking-order list. A plain list ("a tent, a stove and some gas") still answers straight away.
+
    The server knows whether a question was spoken or typed. A typed word is only corrected when it's close in letters, however alike it sounds, and the AI is told which it was.
 3. **Rankings are computed, never guessed.** "Cheapest" is an SQL sort over every product in stock at that store, not a model's opinion.
 4. **The AI only sees what's on the shelf.** Search picks at most 18 products, with live price, aisle, bay and stock, and the AI recommends from those. It can't quote a product or price the store doesn't have. If search can't tell which shelf a question is about, the AI first says what to search for, then answers from the results.
@@ -70,7 +72,7 @@ Several shoppers at the same moment, everything except the AI call:
 8 real AI questions at once: first words median 1.85 s, slowest first words 2.44 s, slowest finished 2.96 s, 0 failed.
 <!-- latency:end -->
 
-Answers are checked by `node scripts/test_answers.mjs`: 621 checks against the deployed server, with the expected results worked out from the raw data independently of the server's logic.
+Answers are checked by `node scripts/test_answers.mjs`: 628 checks against the deployed server, with the expected results worked out from the raw data independently of the server's logic.
 
 Any product can be asked for by name. `node scripts/test_names.mjs` picks random products and asks for each one three ways. Over about 270 products, this is how often the product reached the shopper or the AI's shelf. The mishearing is simulated, copying what speech did on a real phone. Most of the misses are a near variant, like another size of the same thing.
 
