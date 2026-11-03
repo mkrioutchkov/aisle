@@ -159,6 +159,10 @@ Deno.serve(async req => {
   const questionForAi = r.q || q;
   if (body.dry) {
     // A dry run never reaches the AI, so a check can say what it would have decided, to test what the server does with that.
+    if (Array.isArray(body.plan?.items) && body.plan.items.length > 1) {
+      const list = await engine.listFromItems(body.plan.items, { voice: !!body.voice });
+      if (list) return json({ type: "answer", heard: q, ...list, timing: {} });
+    }
     if (r.followUp && body.plan) {
       const list = await engine.followUpShelf(body.plan, body.ctx);
       return json({ type: "answer", route: "ai", dry: true, followUp: true, q: engine.followUpQuestion(questionForAi, body.plan, body.ctx), order: list.order, pool: list.pool, likely: list.likely, timing: {} });
@@ -187,6 +191,16 @@ Deno.serve(async req => {
           const plan = await aiPlan(AI_SERVICES, engine.planMessages(questionForAi, !!body.voice, r.followUp ? { chat: body.chat, top: body.ctx?.top, about: body.ctx?.about || body.ctx?.label } : null), { tryMs: PLAN_MS });
           // DeepSeek has just shown it's in trouble, so don't spend the time left waiting on it again.
           if (plan.failed && AI_SERVICES.length > 1) tries = AI_SERVICES.slice(1);
+          // Several things to buy: the usual shopping list, in walking order, needs no more from the AI.
+          const list = Array.isArray(plan.items) && plan.items.length > 1 ? await engine.listFromItems(plan.items, { voice: !!body.voice }) : null;
+          if (list) {
+            const total = performance.now() - t0;
+            send({ type: "answer", heard: q, ...list, timing: { server_ms: Math.round(total), plan_ms: Math.round(performance.now() - planStart) } });
+            log(asked, q, "list", true, total, total);
+            controller.close();
+            return;
+          }
+          if (!plan.searches.length && Array.isArray(plan.items)) plan.searches = plan.items.map((item: unknown) => ({ q: item }));
           if (!r.followUp) shelf = { ...shelf, pool: await engine.planned(plan.searches, shelf.pool) };
           // A follow-up with no plan falls back on the words of the question.
           else if (plan.failed >= AI_SERVICES.length) shelf = await engine.shelf(questionForAi, r.a, body.ctx || null, r.guess);

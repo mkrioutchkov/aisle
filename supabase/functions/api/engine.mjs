@@ -25,6 +25,7 @@ export function createEngine(db, info, store) {
   // The kinds of product the store has, from its own categories.
   const KINDS = new Set(info.aisles.flatMap(a => a.cats || []).flatMap(c => headsOf(c)));
   const idf = w => Math.log(1 + CATALOGUE / ((wordInfo.get(w) || {}).df || 1));
+  const isKind = w => altsOf(w).some(x => KINDS.has(x));
   const altsOf = w => [...new Set([w, ...(SYN[w] || "").split("|").flatMap(s => (s ? toks(s) : []))])];
 
   // The product words in some text, ready for a database search. Words the catalogue doesn't have are dropped.
@@ -513,9 +514,21 @@ export function createEngine(db, info, store) {
     if (parts.length > 8) return null;
     // "a tent for two people and a dog" is one question about a tent, not a list with a dog on it.
     if (parts.some(p => /\b(dogs?|kids?|wife|husband|partner|mates?|family|son|daughter|baby|child|children|friends?|mum|dad)$/.test(p))) return null;
-    const [answers, byName] = await Promise.all([Promise.all(parts.map(part => routeOne(part, { ...opts, single: true, ctx: null }))), named(q)]);
+    const byName = await named(q);
     // A name can be full of product words, but "columbia womens pfg bahama long sleeve shirt" is one shirt.
     if (byName[0]?.sim >= NAME_SURE) return null;
+    // Speech drops the joins: two kinds of product or a word said twice in one piece ("esky chair", "tent tent pegs") may
+    // be two things, so the AI gets to say. With no AI to ask, it stays as it is.
+    if (!opts.partial && parts.some(p => { const w = words(p); return new Set(w).size < w.length || new Set(w.filter(isKind)).size > 1; })) return null;
+    return listOf(parts, opts, notes);
+  }
+
+  // A shopping list the AI worked out from how it was said: speech heard "a tent, tent pegs and some shoes" as "i want to
+  // tent tent pegs and some shoes".
+  const listFromItems = (items, opts = {}) => listOf(items.slice(0, 8).map(String).filter(x => words(x).length), opts, []);
+
+  async function listOf(parts, opts, notes) {
+    const answers = await Promise.all(parts.map(part => routeOne(part, { ...opts, single: true, ctx: null })));
     const rows = [], missing = [];
     answers.forEach((r, i) => {
       const p = r && !r.ai && r.ok && r.items && r.items[0] && r.items[0].p;
@@ -565,7 +578,7 @@ export function createEngine(db, info, store) {
     const first = parseAsk(heard), content = words(first.rest), lower = heard.toLowerCase().replace(/['’]/g, "");
     const alone = ALONE[content.join(" ")];
     if (alone) return routeOne(heard.toLowerCase().replace(new RegExp(`\\b${content[0]}s?\\b`), alone), opts);
-    const namesKind = content.length > 0 && altsOf(content[content.length - 1]).some(w => KINDS.has(w));
+    const namesKind = content.length > 0 && isKind(content[content.length - 1]);
     if (opts.ctx?.top && !opts.single && !namesKind && !KIT_RE.test(qnHeard)) {
       if (/,|\band\b/.test(lower)) {
         const list = await listAnswer(heard, opts);
@@ -749,6 +762,8 @@ export function createEngine(db, info, store) {
     if (ctx && ctx.top && !pool.length && !a.rel) { const r = await findFromCtx(ctx, { sort: a.sort || "rating", limit: a.sort ? 12 : 6 }); r.rows.forEach(add); }
     // A product word in the question is enough to go on, and so is a follow-up: "cheaper" with nothing cheaper left
     // is still an answer. Only with neither does the AI plan its own search.
+    // Several kinds of product named could be a shopping list, a choice or one thing for another. That's for the AI to say.
+    if (new Set(known.filter(isKind)).size > 1) return { pool, strong: false };
     return { pool, strong: matched || shelves.length > 0 || (heads.length > 0 && pool.length > 0) || !!(a.rel && ctx && ctx.top) || !!guessed?.rows.length || byName[0]?.sim >= NAME_SURE };
   }
 
@@ -808,8 +823,9 @@ ${services}`;
     if (past) {
       const guide = info.aisles.map(a => `${a.label}: ${(a.cats || []).slice(0, 8).join(", ")}`).join("\n");
       return [
-        { role: "system", content: `You work out what a shopper at an Australian outdoor store wants next, reading their question as part of the CONVERSATION. A spoken question may have a misheard word and a typed one a typo, so work out what they meant. Reply with JSON only: {"meant":"","same":true,"extra":"","sort":"rating","max":null,"searches":[]}.
+        { role: "system", content: `You work out what a shopper at an Australian outdoor store wants next, reading their question as part of the CONVERSATION. A spoken question may have a misheard word and a typed one a typo, so work out what they meant. Reply with JSON only: {"meant":"","items":[],"same":true,"extra":"","sort":"rating","max":null,"searches":[]}.
 Put what they meant in meant, in plain corrected words.
+If they've named several different things they want, not a choice between them, put each in items in plain corrected words and stop there. Speech swallows or mishears small words, so "to" can be "a", and a word said twice may be two separate things.
 If it's about what they searched for, set same to true. Put any new detail in extra, as plain words a product name would contain, such as who it's for, otherwise leave it empty. Use sort (rating, price-asc or price-desc) and max (dollars or null) for what they want done about price or quality: a complaint about the price means price-asc.
 If it's about one particular product or something different, set same to false and give searches, each {"q":"2 or 3 plain product words","sort":"rating","max":null}, using words from the catalogue below. If it isn't about products, set same to false with no searches.
 
@@ -820,7 +836,7 @@ ${guide}` },
     }
     const guide = info.aisles.map(a => `${a.label}: ${(a.cats || []).slice(0, 8).join(", ")}`).join("\n");
     return [
-      { role: "system", content: `You turn a shopper's question at an Australian outdoor store into product searches. Reply with JSON only: {"searches":[{"q":"2 or 3 plain product words","sort":"rating|price-asc|price-desc","max":null}]}. Give 1 to 3 searches for the products that would actually help, using words from the catalogue below. A spoken question may have a misheard word and a typed one a typo, so work out what they meant. If it isn't about products, reply {"searches":[]}.\n\nCATALOGUE\n${guide}` },
+      { role: "system", content: `You turn a shopper's question at an Australian outdoor store into product searches. Reply with JSON only: {"items":[],"searches":[{"q":"2 or 3 plain product words","sort":"rating|price-asc|price-desc","max":null}]}. If they've named several different things they want, not a choice between them or one thing for another, put each in items in plain corrected words and leave searches empty. Speech swallows or mishears small words, so "to" can be "a", and a word said twice may be two separate things. Give 1 to 3 searches for the products that would actually help, using words from the catalogue below. A spoken question may have a misheard word and a typed one a typo, so work out what they meant. If it isn't about products, reply {"searches":[]}.\n\nCATALOGUE\n${guide}` },
       { role: "user", content: `${spoken ? "Spoken" : "Typed"}: ${String(q).slice(0, 300)}` },
     ];
   }
@@ -879,5 +895,5 @@ ${guide}` },
     return { route: "none", say: NOT_FOUND, sub: "", items: [], marks: [], zone: "service", ok: false };
   }
 
-  return { route: routeOne, bestHeard, shelf, planned, followUpShelf, followUpQuestion, aiMessages, planMessages, aiAnswer, fallback };
+  return { route: routeOne, bestHeard, shelf, planned, listFromItems, followUpShelf, followUpQuestion, aiMessages, planMessages, aiAnswer, fallback };
 }

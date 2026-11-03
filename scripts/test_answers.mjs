@@ -437,6 +437,19 @@ for (const q of ["are the prices real", "is the stock real", "are these products
   }
 }
 
+// Naming several kinds of product goes to the AI to say what it means, unless it's plainly a list. What it decides becomes the
+// usual shopping list.
+{
+  for (const q of ["i want to tent tent pegs and some shoes", "i want to get a tent and some shoes", "a swag or a tent", "esky chair and umbrella for the beach"]) {
+    const r = await ask(q, { voice: true });
+    ok(r.route === "ai" && r.strong === false, `${q}: the AI should say what it means: ${r.route} ${r.strong}`);
+  }
+  const list = await ask("i want to tent tent pegs and some shoes", { voice: true, plan: { items: ["tent", "tent pegs", "shoes"] } });
+  ok(list.route === "list" && list.items.length === 3 && list.walk, `what the AI lists becomes a shopping list: ${list.route} ${list.say}`);
+  ok((await ask("a tent, a stove and some gas")).route === "list", "a plain list needs no AI");
+  ok((await ask("a tent and some shoes")).route === "list", "a plain list with no commas needs no AI");
+}
+
 // Typing makes typos, not mishearings: only what's spoken gets sound-alike guesses.
 for (const [q, typed, spoken] of [
   ["hiking sues", "hiking sues", "hiking {sues:shoes}"], ["reign jacket", "reign jacket", "{reign:rain} jacket"], ["fishing lion", "fishing lion", "fishing {lion:line}"],
