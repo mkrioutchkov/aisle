@@ -406,6 +406,19 @@ for (const q of ["are the prices real", "is the stock real", "are these products
     ok(r.order === "cheapest first", `${q}: should be in price order: ${r.route} ${r.order}`);
     ok((r.pool || []).length && r.pool.slice(0, 4).every(p => footwear.test(`${p.name} ${p.cat}`)), `${q}: should stay on shoes: ${(r.pool || []).slice(0, 4).map(p => p.name)}`);
   }
+  // Narrowing it down stays on the product too, and goes to the AI. On its own, with nothing to narrow, it doesn't change.
+  const inBlack = await ask("in black", { voice: true, ctx: shoes.ctx });
+  ok(inBlack.route === "ai" && (inBlack.pool || []).filter(p => footwear.test(`${p.name} ${p.cat}`)).length >= 3, `in black: shoes should stay on the shelf: ${(inBlack.pool || []).slice(0, 4).map(p => p.name)}`);
+  for (const [q, re] of [["any for kids", /kid|junior|youth|boy|girl|child/i], ["something for women", /women/i]]) {
+    const r = await ask(q, { voice: true, ctx: shoes.ctx });
+    ok(r.route === "ai" && !r.viaAi, `${q}: should go to the AI: ${r.route}`);
+    ok((r.pool || []).length && r.pool.slice(0, 3).every(p => footwear.test(`${p.name} ${p.cat}`) && re.test(`${p.name} ${p.cat}`)), `${q}: should be shoes that fit: ${(r.pool || []).slice(0, 3).map(p => p.name)}`);
+    const alone = await ask(q, { voice: true });
+    ok(alone.route === "exact", `${q}, with nothing to narrow, should stay a plain search: ${alone.route}`);
+  }
+  const blackTent = await ask("black tent", { ctx: shoes.ctx });
+  const blackTentRows = [...(blackTent.items || []).map(i => i.p), ...(blackTent.pool || [])];
+  ok(blackTentRows.some(p => /tent/i.test(p.name)) && !blackTentRows.slice(0, 3).some(p => footwear.test(p.cat)), `black tent after shoes is a new subject: ${blackTentRows.slice(0, 3).map(p => p.name)}`);
   for (const q of ["most expensive tent", "expensive tent"]) {
     const r = await ask(q);
     ok(r.order === "dearest first", `${q}: should still mean the dearest: ${r.order}`);

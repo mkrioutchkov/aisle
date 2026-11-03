@@ -52,6 +52,8 @@ export const STOP = new Set(("a an the even yeah yep yup nah nope they is are wa
   "recommend suggest something item should bring take start starting use using try trying think know see put make " +
   "gday ill give gimme after chasing actually alright already again always anyway around across ahead help reckon maybe hope hoping chance fetch point").split(/\s+/));
 
+// Words that narrow down what's being discussed, rather than being a kind of product themselves.
+export const NARROWING = new Set("women woman ladies lady men man guy kid child children junior youth toddler baby infant boy girl adult unisex black blue red green white grey gray pink orange yellow purple brown navy khaki small medium large big little light lightweight heavy waterproof wool merino leather size".split(" ").map(stem));
 // A word that means something narrower when it's all that was asked. Real pegs are tent accessories, so "pegs" alone
 // would find a peg hammer first.
 export const ALONE = { peg: "tent pegs" };

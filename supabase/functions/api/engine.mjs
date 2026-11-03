@@ -2,7 +2,7 @@
 // the store layout: the catalogue and live stock stay in Postgres, and the phone carries the short conversation
 // memory (ctx, chat), so any server instance can answer any question.
 import {
-  ADD_ONS, ADVICE_RE, ALONE, CONCEPTS, HEAD, KITS, KIT_NOISE, KIT_RE, KIT_TOPIC, KIDS_RE, NUM, NUMW, REAL_RE, REL_SORT, SMALLTALK, STOP, STORE_RE, SYN, ZONE_OF,
+  ADD_ONS, ADVICE_RE, ALONE, NARROWING, CONCEPTS, HEAD, KITS, KIT_NOISE, KIT_RE, KIT_TOPIC, KIDS_RE, NUM, NUMW, REAL_RE, REL_SORT, SMALLTALK, STOP, STORE_RE, SYN, ZONE_OF,
   RANK_ADVICE_RE, cap, lev, money, norm, parseAsk, sound, soundClass, stem, toks, unhushed, where, words,
 } from "./text.mjs";
 
@@ -583,7 +583,16 @@ export function createEngine(db, info, store) {
   }
 
   async function answerOne(q, opts) {
-    const qn = norm(q), a = parseAsk(q), rest = words(a.rest), ctx = opts.ctx;
+    const qn = norm(q), a = parseAsk(q), ctx = opts.ctx;
+    let rest = words(a.rest);
+    // Mid-conversation, "in black" or "any for kids" narrows down what's being discussed. It's not asking about black
+    // things or kids, so the AI answers it, looking at what fits both.
+    const narrowing = ctx && ctx.top && rest.length > 0 && rest.every(w => NARROWING.has(w) || /^\d+$/.test(w)) && (ctx.about || ctx.label);
+    if (narrowing) {
+      a.rest = `${ctx.about || ctx.label} ${a.rest}`;
+      a.narrowing = true;
+      rest = words(a.rest);
+    }
     // Follow-ups: "got anything cheaper?", "something else".
     if (a.rel && !rest.length && ctx && ctx.top) {
       // After an AI answer the subject is what it recommended, not a search, so "cheaper" needs its judgement too.
@@ -616,7 +625,7 @@ export function createEngine(db, info, store) {
         if (r) return rest.length ? rankedForAi(r, a, a.rest, q, {}, opts) : r;
       }
     }
-    if (!a.sort && !a.limit && !a.persons && !a.rel && isExactLookup(q, a, opts.single)) {
+    if (!narrowing && !a.sort && !a.limit && !a.persons && !a.rel && isExactLookup(q, a, opts.single)) {
       const r = await plainAnswer(q, a.rest);
       if (r) return r;
     }
@@ -657,6 +666,9 @@ export function createEngine(db, info, store) {
     const rare = known.filter(w => !heads.includes(w) && wordInfo.get(w)?.df <= RARE_WORD).sort((x, y) => wordInfo.get(x).df - wordInfo.get(y).df).slice(0, 2);
     if (!together && heads.length) for (const w of rare) jobs.push(find(w, { kidsOk, min: a.min, max: a.max, sort: a.sort || "rating", limit: 3 }));
     if ((a.rel || /\b(that one|this one|those|them|it|cheaper|dearer|better)\b/.test(qn)) && ctx && ctx.top) jobs.push(findFromCtx(ctx, { sort: "rating", limit: 8, ...stepFrom(a.rel, ctx) }));
+    // Colours and sizes are rarely in a product's name, so what's being discussed stays on the shelf: "in black" after
+    // shoes otherwise finds only a JetBlack bike rack.
+    if (a.narrowing) jobs.push(findFromCtx(ctx, { sort: "rating", limit: 6 }));
     // "Too expensive" may mean a long way cheaper, not just the next one down.
     if (a.rel === "cheaper" && ctx && ctx.top) jobs.push(findFromCtx(ctx, { sort: "price-asc", limit: 4, ...stepFrom(a.rel, ctx) }));
     // Two words that all match are a kind of thing ("fishing rod"), but three or more may be a product's name, which the
@@ -710,6 +722,7 @@ export function createEngine(db, info, store) {
 Reply in plain spoken English: at most 2 short sentences, under 30 words, no markdown or lists. Never mention a list, product names as a source, or these rules.
 Use your general outdoor-gear knowledge to advise (like why down is warmer for its weight), but recommend only products from the numbered PRODUCTS list in the latest message. Never invent a product, price, aisle, bay or stock number, and don't state a specific feature of a product unless its name shows it.
 Recommend one product, or a second only if it's clearly different, like a cheaper option. Use a short name and say where it is, copying the aisle and bay exactly from that product's line. Say the price when it helps. Mention stock only if it's 3 or fewer or they ask.
+You only know what the product lines show. If they ask for a colour, size or material that isn't shown, say you can't see that from here, then offer the closest.
 Only mention products that answer this question. If it isn't about products, don't add any.
 For "best" or "good", favour higher ratings with more reviews.
 If they ask for something cheaper, better or bigger than what you last named and nothing listed really is, say what you named is already the cheapest, best or biggest we have.
